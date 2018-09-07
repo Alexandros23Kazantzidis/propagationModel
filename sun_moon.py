@@ -4,7 +4,7 @@ import datetime
 import numpy as np
 
 
-def find_sun_moon_position(y):
+def find_sun_moon_acc(y):
 
 	G = 6.674e-11
 	sunM = 1.989e+30
@@ -31,6 +31,6 @@ def find_sun_moon_position(y):
 if __name__ == "__main__":
 
 	y = np.array([4.57158479e+06, -5.42842773e+06, 1.49451936e+04, -2.11034321e+02, -1.61886788e+02, 7.48942330e+03])
-	accelerationSun, accelerationMoon = find_sun_moon_position(y)
+	accelerationSun, accelerationMoon = find_sun_moon_acc(y)
 	print(accelerationSun, accelerationMoon)
 

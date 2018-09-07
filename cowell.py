@@ -5,6 +5,7 @@ import pickle
 from scipy import special as sp
 from tabulate import tabulate
 import math as mp
+from sun_moon import find_sun_moon_acc
 
 
 def restruct_geopotential_file(gravityModelFileName):
@@ -148,10 +149,10 @@ def ydot_geopotential(y, C, S, n, m):
 	ax = -ax
 	ay = -ay
 	# print(ax, ay, az)
-	return np.array([*y[3:6], ax, ay, az])
+	return np.array([ax, ay, az])
 
 
-def ydot(y):
+def ydot(y, C, S, n, m):
 	"""Returns the time derivative of a given state.
 		Args:
 			y(1x6 numpy array): the state vector [rx,ry,rz,vx,vy,vz]
@@ -161,13 +162,19 @@ def ydot(y):
 
 	mu = 398600.4405e+09
 	r = np.linalg.norm(y[0:3])
-	a = -mu/(r**3)*y[0:3]
+	# a = -mu/(r**3)*y[0:3]
+
+	a = ydot_geopotential(y, C, S, n, m)
+
+	accelerationSun, accelerationMoon = find_sun_moon_acc(y)
+
+	a = a + accelerationSun + accelerationMoon
 
 	# p_j2 = j2_pert(y)
 	# p_drag = drag(y)
 	#
 	# a = a+p_j2+p_drag
-	print(a)
+	# print(a)
 	return np.array([*y[3:6], *a])
 
 
@@ -196,10 +203,10 @@ def rk4(y, t0, tf, h=5):
 		# k3 = h*ydot(y+k2/2)
 		# k4 = h*ydot(y+k3)
 
-		k1 = h * ydot_geopotential(y, C, S, 10, 10)
-		k2 = h * ydot_geopotential(y + k1 / 2, C, S, 10, 10)
-		k3 = h * ydot_geopotential(y + k2 / 2, C, S, 10, 10)
-		k4 = h * ydot_geopotential(y + k3, C, S, 10, 10)
+		k1 = h * ydot(y, C, S, 10, 10)
+		k2 = h * ydot(y + k1 / 2, C, S, 10, 10)
+		k3 = h * ydot(y + k2 / 2, C, S, 10, 10)
+		k4 = h * ydot(y + k3, C, S, 10, 10)
 
 		y = y+(k1+2*k2+2*k3+k4)/6
 		t = t+h
@@ -217,8 +224,8 @@ if __name__ == "__main__":
 
 	C, S = createNumpyArrayForCoeffs(data, 10, 10)
 
-	ydot_geopotential(y, C, S, 10, 10)
-	ydot(y)
+	# ydot_geopotential(y, C, S, 10, 10)
+	# ydot(y)
 
 	for i in range(0, 100):
 		final[i, :] = rk4(y, t0, tf, 2)
