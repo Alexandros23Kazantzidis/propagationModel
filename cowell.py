@@ -5,7 +5,8 @@ import pickle
 from scipy import special as sp
 from tabulate import tabulate
 import math as mp
-from sun_moon import find_sun_moon_acc
+from sun_moon import find_sun_moon_acc, position_sun_moon
+from solar_radiation import get_solar_radiation_petrubation
 
 
 def restruct_geopotential_file(gravityModelFileName):
@@ -166,9 +167,12 @@ def ydot(y, C, S, n, m):
 
 	a = ydot_geopotential(y, C, S, n, m)
 
-	accelerationSun, accelerationMoon = find_sun_moon_acc(y)
+	bspFileName = 'de430.bsp'
+	positionSun, positionMoon = position_sun_moon(bspFileName)
+	accelerationSun, accelerationMoon = find_sun_moon_acc(y, positionSun, positionMoon)
+	accelerationRadiation = get_solar_radiation_petrubation(positionSun, y[0:3], 0.5, 720, np.array([4.6, 2.34, 2.20]))
 
-	a = a + accelerationSun + accelerationMoon
+	a = a + accelerationSun + accelerationMoon + accelerationRadiation
 
 	# p_j2 = j2_pert(y)
 	# p_drag = drag(y)
