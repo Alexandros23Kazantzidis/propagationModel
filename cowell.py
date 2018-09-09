@@ -7,6 +7,7 @@ from tabulate import tabulate
 import math as mp
 from sun_moon import find_sun_moon_acc, position_sun_moon
 from solar_radiation import get_solar_radiation_petrubation
+from atmo_drag import find_drag_petrubation
 
 
 def restruct_geopotential_file(gravityModelFileName):
@@ -171,8 +172,9 @@ def ydot(y, C, S, n, m):
 	positionSun, positionMoon = position_sun_moon(bspFileName)
 	accelerationSun, accelerationMoon = find_sun_moon_acc(y, positionSun, positionMoon)
 	accelerationRadiation = get_solar_radiation_petrubation(positionSun, y[0:3], 0.5, 720, np.array([4.6, 2.34, 2.20]))
+	accelerationDrag = find_drag_petrubation(2.1, 720, np.array([4.6, 2.34, 2.20]), y)
 
-	a = a + accelerationSun + accelerationMoon + accelerationRadiation
+	a = a + accelerationSun + accelerationMoon + accelerationRadiation + accelerationDrag
 
 	# p_j2 = j2_pert(y)
 	# p_drag = drag(y)
@@ -236,7 +238,7 @@ if __name__ == "__main__":
 		t0 = tf
 		tf = tf + 100
 		y = final[i, :]
-		print(y)
+		print(i, mp.sqrt(y[0]**2+y[1]**2+y[2]**2) - 6378137)
 
 	plt.plot(final[:, 1])
 	plt.show()
