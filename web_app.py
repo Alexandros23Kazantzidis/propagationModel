@@ -48,7 +48,7 @@ app.layout = html.Div([
 		html.Br(),
 
 		html.Label('Step Size (sec)'),
-		dcc.Input(value='200', type='text', style={'margin-left': '56px'}, id='step-size'),
+		dcc.Input(value='100', type='text', style={'margin-left': '56px'}, id='step-size'),
 	], style={'margin': '20px', }),
 
 	html.Div(children=[
@@ -104,91 +104,86 @@ app.layout = html.Div([
 				])
 def update_output(n_clicks, input1, input2, input3, input4, input5, input6):
 
-	y = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-	index = 0
-	parseInput1 = input1.split(",")
-	for i in parseInput1:
-		y[index] = float(i)
-		index += 1
-
-	if input2 == "" or input3 == "" or input4 == "":
+	if n_clicks == 0:
 		pass
 	else:
-		t0 = float(input2)
-		tf = float(input3)
-		step = float(input4)
+		y = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+		index = 0
+		parseInput1 = input1.split(",")
+		for i in parseInput1:
+			y[index] = float(i)
+			index += 1
 
-		kepOrGeo = int(input5)
-		other = list(input6)
-
-		if kepOrGeo == 2:
-			data = cw.read_geopotential_coeffs("restruct_EGM2008.gfc", False)
-			C, S = cw.createNumpyArrayForCoeffs(data, 10, 10)
+		if input2 == "" or input3 == "" or input4 == "":
+			pass
 		else:
-			C = 0
-			S = 0
+			t0 = float(input2)
+			tf = float(input3)
+			step = float(input4)
 
-		sunAndMoon = False
-		solar = False
-		drag = False
+			kepOrGeo = int(input5)
+			other = list(input6)
 
-		if 1 in other:
-			sunAndMoon = True
+			if kepOrGeo == 2:
+				data = cw.read_geopotential_coeffs("restruct_EGM2008.gfc", False)
+				C, S = cw.createNumpyArrayForCoeffs(data, 10, 10)
+			else:
+				C = 0
+				S = 0
 
-		if 2 in other:
-			solar = True
+			sunAndMoon = False
+			solar = False
+			drag = False
 
-		if 3 in other:
-			drag = True
+			if 1 in other:
+				sunAndMoon = True
 
-		loopTf = step
-		loopIndex = int((tf - t0) / step)
-		final = np.zeros((loopIndex, 6))
-		time = np.zeros(loopIndex)
+			if 2 in other:
+				solar = True
 
-		for i in range(0, loopIndex):
-			final[i, :] = cw.rk4(y, t0, loopTf, 1, kepOrGeo, solar, sunAndMoon, drag, C, S)
-			time[i] = t0
-			t0 = loopTf
-			loopTf = loopTf + step
-			y = final[i, :]
+			if 3 in other:
+				drag = True
 
-		altitude = np.sqrt(final[:, 0]**2 + final[:, 1]**2 + final[:, 2]**2)
+			loopTf = step
+			loopIndex = int((tf - t0) / step)
+			final = np.zeros((loopIndex, 6))
+			time = np.zeros(loopIndex)
 
-		returnTable = pd.DataFrame(data=final[:, :],
-								   index=range(0, loopIndex),
-								   columns=["rx(m)", "ry(m)", "rz(m)", "vx(m/s)", "vy(m/s)", "vz(m/s)"])
+			for i in range(0, loopIndex):
+				final[i, :] = cw.rk4(y, t0, loopTf, step/50, kepOrGeo, solar, sunAndMoon, drag, C, S)
+				time[i] = t0
+				t0 = loopTf
+				loopTf = loopTf + step
+				y = final[i, :]
+				print(t0, loopTf)
 
-		return html.Table(
-			# Header
-			[html.Tr([html.Th(col) for col in returnTable.columns])] +
+			altitude = np.sqrt(final[:, 0]**2 + final[:, 1]**2 + final[:, 2]**2)
 
-			# Body
-			[html.Tr([
-				html.Td(returnTable.iloc[i][col]) for col in returnTable.columns
-			]) for i in range(min(len(returnTable), loopIndex))]
-		), html.Br(), \
-		dcc.Graph(
-			id='alitutde-graph',
-			figure={
-				'data': [
-					go.Scatter(
-						x=time,
-						y=altitude,
-						opacity=0.7,
-					)
-				],
-			}
-		)
+			returnTable = pd.DataFrame(data=final[:, :],
+									   index=range(0, loopIndex),
+									   columns=["rx(m)", "ry(m)", "rz(m)", "vx(m/s)", "vy(m/s)", "vz(m/s)"])
 
+			return html.Table(
+				# Header
+				[html.Tr([html.Th(col) for col in returnTable.columns])] +
 
-
-	# y = np.array([4.57158479e+06, -5.42842773e+06, 1.49451936e+04, -2.11034321e+02, -1.61886788e+02, 7.48942330e+03])
-	# t0, tf = 0, 100.00
-	# final = np.zeros((100, 6))
-	# step =
-	#
-	# # restruct_geopotential_file("EGM2008.gfc")
+				# Body
+				[html.Tr([
+					html.Td(returnTable.iloc[i][col]) for col in returnTable.columns
+				]) for i in range(min(len(returnTable), loopIndex))]
+			), html.Br(), \
+			dcc.Graph(
+				id='alitutde-graph',
+				figure={
+					'data': [
+						go.Scatter(
+							x=time,
+							y=altitude,
+							opacity=0.7,
+						)
+					],
+				}
+			)
 
 
 if __name__ == '__main__':
