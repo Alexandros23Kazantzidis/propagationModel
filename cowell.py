@@ -154,7 +154,7 @@ def ydot_geopotential(y, C, S, n, m):
 	return np.array([ax, ay, az])
 
 
-def ydot(y, C, S, n, m):
+def ydot(y, C, S, n, m, kepOrGeo, solar, sunAndMoon, drag):
 	"""Returns the time derivative of a given state.
 		Args:
 			y(1x6 numpy array): the state vector [rx,ry,rz,vx,vy,vz]
@@ -164,27 +164,36 @@ def ydot(y, C, S, n, m):
 
 	mu = 398600.4405e+09
 	r = np.linalg.norm(y[0:3])
-	# a = -mu/(r**3)*y[0:3]
 
-	a = ydot_geopotential(y, C, S, n, m)
+	a = 0
+	accelerationMoon = 0
+	accelerationDrag = 0
+	accelerationSun = 0
+	accelerationRadiation = 0
+
+	if kepOrGeo == 1:
+		a = -mu/(r**3)*y[0:3]
+	elif kepOrGeo == 2:
+		a = ydot_geopotential(y, C, S, n, m)
 
 	bspFileName = 'de430.bsp'
 	positionSun, positionMoon = position_sun_moon(bspFileName)
-	accelerationSun, accelerationMoon = find_sun_moon_acc(y, positionSun, positionMoon)
-	accelerationRadiation = get_solar_radiation_petrubation(positionSun, y[0:3], 0.5, 720, np.array([4.6, 2.34, 2.20]))
-	accelerationDrag = find_drag_petrubation(2.1, 720, np.array([4.6, 2.34, 2.20]), y)
+
+	if sunAndMoon is True:
+		accelerationSun, accelerationMoon = find_sun_moon_acc(y, positionSun, positionMoon)
+
+	if solar is True:
+		accelerationRadiation = get_solar_radiation_petrubation(positionSun, y[0:3], 0.5, 720, np.array([4.6, 2.34, 2.20]))
+
+	if drag is True:
+		accelerationDrag = find_drag_petrubation(2.1, 720, np.array([4.6, 2.34, 2.20]), y)
 
 	a = a + accelerationSun + accelerationMoon + accelerationRadiation + accelerationDrag
 
-	# p_j2 = j2_pert(y)
-	# p_drag = drag(y)
-	#
-	# a = a+p_j2+p_drag
-	# print(a)
 	return np.array([*y[3:6], *a])
 
 
-def rk4(y, t0, tf, h=5):
+def rk4(y, t0, tf, h, kepOrGeo, solar, sunAndMoon, drag, C, S):
 	"""Runge-Kutta 4th Order Numerical Integrator
 		Args:
 			y(1x6 numpy array): the state vector [rx,ry,rz,vx,vy,vz]
@@ -209,10 +218,10 @@ def rk4(y, t0, tf, h=5):
 		# k3 = h*ydot(y+k2/2)
 		# k4 = h*ydot(y+k3)
 
-		k1 = h * ydot(y, C, S, 10, 10)
-		k2 = h * ydot(y + k1 / 2, C, S, 10, 10)
-		k3 = h * ydot(y + k2 / 2, C, S, 10, 10)
-		k4 = h * ydot(y + k3, C, S, 10, 10)
+		k1 = h * ydot(y, C, S, 10, 10, kepOrGeo, solar, sunAndMoon, drag)
+		k2 = h * ydot(y + k1 / 2, C, S, 10, 10, kepOrGeo, solar, sunAndMoon, drag)
+		k3 = h * ydot(y + k2 / 2, C, S, 10, 10, kepOrGeo, solar, sunAndMoon, drag)
+		k4 = h * ydot(y + k3, C, S, 10, 10, kepOrGeo, solar, sunAndMoon, drag)
 
 		y = y+(k1+2*k2+2*k3+k4)/6
 		t = t+h
@@ -227,19 +236,19 @@ if __name__ == "__main__":
 
 	# restruct_geopotential_file("EGM2008.gfc")
 	data = read_geopotential_coeffs("restruct_EGM2008.gfc", False)
-
+	#
 	C, S = createNumpyArrayForCoeffs(data, 10, 10)
 
 	# ydot_geopotential(y, C, S, 10, 10)
 	# ydot(y)
 
-	for i in range(0, 100):
-		final[i, :] = rk4(y, t0, tf, 2)
-		t0 = tf
-		tf = tf + 100
-		y = final[i, :]
-		print(i, mp.sqrt(y[0]**2+y[1]**2+y[2]**2) - 6378137)
-
-	plt.plot(final[:, 1])
-	plt.show()
+	# for i in range(0, 100):
+	# 	final[i, :] = rk4(y, t0, tf, 2, 2, True, True, False)
+	# 	t0 = tf
+	# 	tf = tf + 100
+	# 	y = final[i, :]
+	# 	print(i, mp.sqrt(y[0]**2+y[1]**2+y[2]**2) - 6378137)
+	#
+	# plt.plot(final[:, 1])
+	# plt.show()
 
