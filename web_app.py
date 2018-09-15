@@ -34,52 +34,49 @@ app.layout = html.Div([
 	html.Div(children=['Satellite Orbit Determination using the propagation model AUTH'], style={'margin': '20px', 'font-size':'16pt'}),
 
 	html.Div(children=[
-		html.H3('Initial Parameters'),
-		html.Label('State Vector (m - m/s)'),
-		dcc.Input(value='4.57158479e+06, -5.42842773e+06, 1.49451936e+04, -2.11034321e+02, -1.61886788e+02, 7.48942330e+03', type='text', style={'margin-left': '10px'}, id='state-vector'),
-		html.Br(),
 
-		html.Label('Initial Time (sec)'),
-		dcc.Input(value='0', type='text', style={'margin-left': '40px'}, id='init-time'),
-		html.Br(),
+		html.Div(children=[
+			html.H3('Initial Parameters'),
+			html.Label('State Vector (m - m/s)', className="main"),
+			dcc.Textarea(value='4.57158479e+06, -5.42842773e+06, 1.49451936e+04, -2.11034321e+02, -1.61886788e+02, 7.48942330e+03', id='state-vector', style={"margin-bottom": "5px", "min-height": "150px"}),
 
-		html.Label('Final Time (sec)'),
-		dcc.Input(value='10000', type='text', style={'margin-left': '46px'}, id='final-time'),
-		html.Br(),
+			html.Label('Initial Time (sec)', className="main"),
+			dcc.Input(value='0', type='text', id='init-time', style={"margin-bottom": "5px"}),
 
-		html.Label('Step Size (sec)'),
-		dcc.Input(value='100', type='text', style={'margin-left': '56px'}, id='step-size'),
-	], style={'margin': '20px', }),
+			html.Label('Final Time (sec)', className="main"),
+			dcc.Input(value='1000', type='text', id='final-time', style={"margin-bottom": "5px"}),
 
-	html.Div(children=[
-		html.H3('Force Model'),
+			html.Label('Step Size (sec)', className="main"),
+			dcc.Input(value='100', type='text', id='step-size', style={"margin-bottom": "5px"}),
+		], style={'margin': '20px', }),
 
-		html.Label("Select Earth's Gravity Model", style={'margin-top': '10px'}),
-		html.Br(),
-		dcc.Dropdown(
-			id="earth-model",
-			options=[
-				{'label': 'Keplerian', 'value': 1},
-				{'label': 'Geodynamic Model', 'value': 2},
-			],
-			value=2
-		),
-		html.Br(),
+		html.Div(children=[
+			html.H3('Force Model'),
 
-		html.Label("Select other forces you want to include to the Model"),
-		html.Br(),
-		dcc.Checklist(
-			id="other-forces",
-			options=[
-				{'label': "Sun's and Moon's Gravitational Force", 'value': 1},
-				{'label': 'Solar Radiation', 'value': 2},
-				{'label': 'Atmospheric Drag', 'value': 3},
-			],
-			values=[]
-		),
+			html.Label("Select Earth's Gravity Model", style={'margin-top': '10px'}, className="main"),
+			dcc.Dropdown(
+				id="earth-model",
+				options=[
+					{'label': 'Keplerian', 'value': 1},
+					{'label': 'Geodynamic Model', 'value': 2},
+				],
+				value=2
+			),
+			html.Br(),
 
-	], style={'margin': '20px', 'width': '30%'}),
+			html.Label("Select other forces you want to include to the Model", className="main"),
+			dcc.Checklist(
+				id="other-forces",
+				options=[
+					{'label': "Sun's and Moon's Gravitational Force", 'value': 1},
+					{'label': 'Solar Radiation', 'value': 2},
+					{'label': 'Atmospheric Drag', 'value': 3},
+				],
+				values=[]
+			,style={"text-align": "left"}),
 
+		], style={'margin': '20px'}),
+	], style={'display': 'inline-flex'}),
 
 	html.Div(children=[
 
@@ -90,7 +87,7 @@ app.layout = html.Div([
 	html.Div(id='output-state', style={'margin': '40px'})
 
 
-], style={'columnCount': 1})
+], style={'columnCount': 1, "text-align": "center"})
 
 
 @app.callback(Output('output-state', 'children'),
@@ -151,19 +148,23 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6):
 
 			for i in range(0, loopIndex):
 				final[i, :] = cw.rk4(y, t0, loopTf, step/50, kepOrGeo, solar, sunAndMoon, drag, C, S)
-				time[i] = t0
+				time[i] = loopTf
 				t0 = loopTf
 				loopTf = loopTf + step
 				y = final[i, :]
 				print(t0, loopTf)
 
 			altitude = np.sqrt(final[:, 0]**2 + final[:, 1]**2 + final[:, 2]**2)
+			beforeDataFrame = np.zeros((loopIndex, 7))
+			beforeDataFrame[:, 1:7] = final[:]
+			beforeDataFrame[:, 0] = time[:]
 
-			returnTable = pd.DataFrame(data=final[:, :],
+			returnTable = pd.DataFrame(data=beforeDataFrame[:, :],
 									   index=range(0, loopIndex),
-									   columns=["rx(m)", "ry(m)", "rz(m)", "vx(m/s)", "vy(m/s)", "vz(m/s)"])
+									   columns=["Time(sec)", "rx(m)", "ry(m)", "rz(m)", "vx(m/s)", "vy(m/s)", "vz(m/s)"])
 
-			return html.Table(
+
+			return html.Div(children=[ html.Table(
 				# Header
 				[html.Tr([html.Th(col) for col in returnTable.columns])] +
 
@@ -171,7 +172,7 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6):
 				[html.Tr([
 					html.Td(returnTable.iloc[i][col]) for col in returnTable.columns
 				]) for i in range(min(len(returnTable), loopIndex))]
-			), html.Br(), \
+			)],style={"padding-left": "20%"}), html.Br(), \
 			dcc.Graph(
 				id='alitutde-graph',
 				figure={
