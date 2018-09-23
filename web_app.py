@@ -16,17 +16,6 @@ import plotly.graph_objs as go
 app = dash.Dash()
 app.title = 'Auth Propagation Model'
 
-# # setup static folder
-# STATIC_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), 'static'))
-#
-# print(STATIC_PATH)
-#
-# @app.server.route('/static/<resource>')
-# def serve_static(resource):
-# 	return flask.send_from_directory(STATIC_PATH, resource)
-
-# app.css.append_css({'external_url': '/static/style.css'})
-
 app.layout = html.Div([
 
 	html.H1('AUTH Propagation Model'),

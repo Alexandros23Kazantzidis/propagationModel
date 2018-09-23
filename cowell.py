@@ -8,225 +8,276 @@ import math as mp
 from sun_moon import find_sun_moon_acc, position_sun_moon
 from solar_radiation import get_solar_radiation_petrubation
 from atmo_drag import find_drag_petrubation
+from pylab import rcParams
 
 
-def restruct_geopotential_file(gravityModelFileName):
-	"""Creates a new restructured file holding the geopotential coefficients Cnm,Snm of a gravity model
-		Args:
-			gravityModelFileName (string): the name of the file holding the coeffs
-	"""
+class propagator():
 
-	handler = open(gravityModelFileName, 'r')
-	writeHandler = open("restruct_" + gravityModelFileName, "a")
-	for line in handler:
-		reStructLine = re.sub("\s+", ",", line.strip())
-		writeHandler.write(reStructLine)
-		writeHandler.write("\n")
+	def __init__(self):
+		self.accelerations = np.zeros((5, 3))
+		self.keepAccelerations = []
+		self.keepStateVectors = []
+		self.epochs = []
 
-	handler.close()
-	writeHandler.close()
+	def restruct_geopotential_file(self, gravityModelFileName):
+		"""Creates a new restructured file holding the geopotential coefficients Cnm,Snm of a gravity model
+			Args:
+				gravityModelFileName (string): the name of the file holding the coeffs
+		"""
 
+		handler = open(gravityModelFileName, 'r')
+		writeHandler = open("restruct_" + gravityModelFileName, "a")
+		for line in handler:
+			reStructLine = re.sub("\s+", ",", line.strip())
+			writeHandler.write(reStructLine)
+			writeHandler.write("\n")
 
-def read_geopotential_coeffs(restructGravityFileName,firstRead):
-	"""Returns an array holding the geopotential coefficients Cnm,Snm of a gravity model
-		Args:
-			gravityModelFileName (string): the name of the file holding the coeffs
-			firstRead (boolean): if you are using this method the first time or the .p file has been created already
-		Returns:
-			nxm numpy array: coeffs in proper format to be used by ydot_geopotential
-	"""
+		handler.close()
+		writeHandler.close()
 
-	if firstRead is True:
+	def read_geopotential_coeffs(self, restructGravityFileName,firstRead):
+		"""Returns an array holding the geopotential coefficients Cnm,Snm of a gravity model
+			Args:
+				gravityModelFileName (string): the name of the file holding the coeffs
+				firstRead (boolean): if you are using this method the first time or the .p file has been created already
+			Returns:
+				nxm numpy array: coeffs in proper format to be used by ydot_geopotential
+		"""
 
-		data = np.genfromtxt(restructGravityFileName, delimiter=",")
-		data = data[1:, 1:]
+		if firstRead is True:
 
-		pickle.dump(data, open("data.p", "wb"))
-	elif firstRead is False:
+			data = np.genfromtxt(restructGravityFileName, delimiter=",")
+			data = data[1:, 1:]
 
-		data = pickle.load(open("data.p", "rb"))
+			pickle.dump(data, open("data.p", "wb"))
+		elif firstRead is False:
 
-	return data
+			data = pickle.load(open("data.p", "rb"))
 
+		return data
 
-def cart2geodetic(x, y, z):
-	"""cartesian to geodetic coordinates transformation ellipsoid used WGS84
-		Args:
-			x (float)
-			y (float)
-			z (float)
-		Returns:
-			r (float)
-			phi (float)
-			l (float)
-	"""
+	def cart2geodetic(self, x, y, z):
+		"""cartesian to geodetic coordinates transformation ellipsoid used WGS84
+			Args:
+				x (float)
+				y (float)
+				z (float)
+			Returns:
+				r (float)
+				phi (float)
+				l (float)
+		"""
 
-	a = 6378137
-	f = 1 / 298.257223563
-	b = a - f*a
-	e = mp.sqrt(2*f - f**2)
-	epsilon = mp.sqrt((a**2 - b**2) / b**2)
-	p = mp.sqrt(x**2 + y**2)
-	theta = mp.atan2((z*a), (p*b))
+		a = 6378137
+		f = 1 / 298.257223563
+		b = a - f*a
+		e = mp.sqrt(2*f - f**2)
+		epsilon = mp.sqrt((a**2 - b**2) / b**2)
+		p = mp.sqrt(x**2 + y**2)
+		theta = mp.atan2((z*a), (p*b))
 
-	phi = mp.atan2((z + (epsilon**2)*b*mp.sin(theta)**3), (p - (e**2)*a*mp.cos(theta)**3))
-	l = mp.atan2(y, x)
-	r = p / mp.cos(phi) - (a / mp.sqrt(1-(e**2)*mp.sin(phi)**2))
+		phi = mp.atan2((z + (epsilon**2)*b*mp.sin(theta)**3), (p - (e**2)*a*mp.cos(theta)**3))
+		l = mp.atan2(y, x)
+		r = p / mp.cos(phi) - (a / mp.sqrt(1-(e**2)*mp.sin(phi)**2))
 
-	return r, phi, l
+		return r, phi, l
 
+	def createNumpyArrayForCoeffs(self, gravityCoeff, n, m):
+		"""
+			Return Cnm and Snm in separate numpy arrays for certain degree n and order m
+		"""
+		C = np.zeros((n, m))
+		S = np.zeros((n, m))
 
-def createNumpyArrayForCoeffs(gravityCoeff, n, m):
-	"""
-		Return Cnm and Snm in separate numpy arrays for certain degree n and order m
-	"""
-	C = np.zeros((n, m))
-	S = np.zeros((n, m))
+		for i in range(0, len(gravityCoeff)):
+			nIndex = gravityCoeff[i, 0]
+			mIndex = gravityCoeff[i, 1]
 
-	for i in range(0, len(gravityCoeff)):
-		nIndex = gravityCoeff[i, 0]
-		mIndex = gravityCoeff[i, 1]
-
-		if (nIndex > n-1) or (mIndex > m-1):
-			continue
-		else:
-			C[int(nIndex), int(mIndex)] = gravityCoeff[i, 2]
-			S[int(nIndex), int(mIndex)] = gravityCoeff[i, 3]
-
-	C[0, 0] = 1
-	return C, S
-
-
-def ydot_geopotential(y, C, S, n, m):
-	"""Returns the time derivative of only the geopotential effect a given state.
-		Args:
-			y(1x6 numpy array): the state vector [rx,ry,rz,vx,vy,vz]
-			gravityCoeff (nxm numpy array): the array where you have stored the geopotential coefficients Cnm,Snm
-			n (integer): degree of coeffs you want to use for the calculation
-			m (integer): order of coeffs you want to use for the calculation
-		Returns:
-			1x6 numpy array: the time derivative of y [vx,vy,vz,ax,ay,az]
-	"""
-
-	r, phi, l = cart2geodetic(y[0], y[1], y[2])
-
-	earthR = 6378137
-	mu = 398600.4405e+09
-
-	r = r + earthR
-
-	legendreP = sp.lpmn(n+1, m+1, mp.sin(phi))
-	legendreP = legendreP[0]
-	legendreP = np.transpose(legendreP)
-	V = np.zeros((n+1, m+1))
-	W = np.zeros((n+1, m+1))
-
-	for i in range(0, n+1):
-		for j in range(0, i+1):
-
-			V[i, j] = ((earthR/r) ** (i+1)) * (legendreP[i, j] * mp.cos(j * l))
-			W[i, j] = ((earthR/r) ** (i+1)) * (legendreP[i, j] * mp.sin(j * l))
-
-	ax = 0
-	ay = 0
-	az = 0
-	for i in range(0, n-2):
-		for j in range(0, i+1):
-
-			if j == 0:
-				ax = ax + (mu / earthR**2) * (-C[i, 0] * V[i+1, 1])
-
-				ay = ay + (mu / earthR ** 2) * (-C[i, 0] * W[i + 1, 1])
+			if (nIndex > n-1) or (mIndex > m-1):
+				continue
 			else:
-				ax = ax + (mu / earthR ** 2) * 0.5 * (-C[i, j] * V[i + 1, j + 1] - S[i, j] * W[i + 1, j + 1]) + \
-					 (mp.factorial(i - j + 2) / mp.factorial(i - j)) * (
-					 C[i, j] * V[i + 1, j - 1] + S[i, j] * W[i + 1, j - 1])
+				C[int(nIndex), int(mIndex)] = gravityCoeff[i, 2]
+				S[int(nIndex), int(mIndex)] = gravityCoeff[i, 3]
 
-				ay = ay + (mu / earthR ** 2) * 0.5 * (-C[i, j] * W[i + 1, j + 1] + S[i, j] * V[i + 1, j + 1]) + \
-				     (mp.factorial(i - j + 2) / mp.factorial(i - j)) * (
-					 -C[i, j] * W[i + 1, j - 1] + S[i, j] * V[i + 1, j - 1])
+		C[0, 0] = 1
+		return C, S
 
-			az = az + (mu / earthR ** 2) * ((i-j+1) * (-C[i, j] * V[i+1, j] - S[i, j] * W[i+1, j]))
+	def ydot_geopotential(self, y, C, S, n, m):
+		"""Returns the time derivative of only the geopotential effect for a given state.
+			Args:
+				y(1x6 numpy array): the state vector [rx,ry,rz,vx,vy,vz]
+				gravityCoeff (nxm numpy array): the array where you have stored the geopotential coefficients Cnm,Snm
+				n (integer): degree of coeffs you want to use for the calculation
+				m (integer): order of coeffs you want to use for the calculation
+			Returns:
+				1x6 numpy array: the time derivative of y [vx,vy,vz,ax,ay,az]
+		"""
 
-	ax = -ax
-	ay = -ay
-	# print(ax, ay, az)
-	return np.array([ax, ay, az])
+		r, phi, l = self.cart2geodetic(y[0], y[1], y[2])
+
+		earthR = 6378137
+		mu = 398600.4405e+09
+
+		r = r + earthR
+
+		legendreP = sp.lpmn(n+1, m+1, mp.sin(phi))
+		legendreP = legendreP[0]
+		legendreP = np.transpose(legendreP)
+		V = np.zeros((n+1, m+1))
+		W = np.zeros((n+1, m+1))
+
+		for i in range(0, n+1):
+			for j in range(0, i+1):
+
+				V[i, j] = ((earthR/r) ** (i+1)) * (legendreP[i, j] * mp.cos(j * l))
+				W[i, j] = ((earthR/r) ** (i+1)) * (legendreP[i, j] * mp.sin(j * l))
+
+		ax = 0
+		ay = 0
+		az = 0
+		for i in range(0, n-2):
+			for j in range(0, i+1):
+
+				if j == 0:
+					ax = ax + (mu / earthR**2) * (-C[i, 0] * V[i+1, 1])
+
+					ay = ay + (mu / earthR ** 2) * (-C[i, 0] * W[i + 1, 1])
+				else:
+					ax = ax + (mu / earthR ** 2) * 0.5 * (-C[i, j] * V[i + 1, j + 1] - S[i, j] * W[i + 1, j + 1]) + \
+						 (mp.factorial(i - j + 2) / mp.factorial(i - j)) * (
+						 C[i, j] * V[i + 1, j - 1] + S[i, j] * W[i + 1, j - 1])
+
+					ay = ay + (mu / earthR ** 2) * 0.5 * (-C[i, j] * W[i + 1, j + 1] + S[i, j] * V[i + 1, j + 1]) + \
+					     (mp.factorial(i - j + 2) / mp.factorial(i - j)) * (
+						 -C[i, j] * W[i + 1, j - 1] + S[i, j] * V[i + 1, j - 1])
+
+				az = az + (mu / earthR ** 2) * ((i-j+1) * (-C[i, j] * V[i+1, j] - S[i, j] * W[i+1, j]))
+
+		ax = -ax
+		ay = -ay
+		# print(ax, ay, az)
+		return np.array([ax, ay, az])
+
+	def ydot(self, y, C, S, n, m, kepOrGeo, solar, sunAndMoon, drag):
+		"""Returns the time derivative of a given state.
+			Args:
+				y(1x6 numpy array): the state vector [rx,ry,rz,vx,vy,vz]
+			Returns:
+				1x6 numpy array: the time derivative of y [vx,vy,vz,ax,ay,az]
+		"""
+
+		mu = 398600.4405e+09
+		r = np.linalg.norm(y[0:3])
+
+		a = np.array([0.0, 0.0, 0.0])
+		accelerationMoon = np.array([0.0, 0.0, 0.0])
+		accelerationDrag = np.array([0.0, 0.0, 0.0])
+		accelerationSun = np.array([0.0, 0.0, 0.0])
+		accelerationRadiation = np.array([0.0, 0.0, 0.0])
+
+		if kepOrGeo == 1:
+			a = -mu/(r**3)*y[0:3]
+		elif kepOrGeo == 2:
+			a = self.ydot_geopotential(y, C, S, n, m)
+
+		self.accelerations[0, :] = a
+
+		bspFileName = 'de430.bsp'
+		positionSun, positionMoon = position_sun_moon(bspFileName)
+
+		if sunAndMoon is True:
+			accelerationSun, accelerationMoon = find_sun_moon_acc(y, positionSun, positionMoon)
+
+		if solar is True:
+			accelerationRadiation = get_solar_radiation_petrubation(positionSun, y[0:3], 0.5, 720, np.array([4.6, 2.34, 2.20]))
+
+		if drag is True:
+			accelerationDrag = find_drag_petrubation(2.1, 720, np.array([4.6, 2.34, 2.20]), y)
+
+		a = a + accelerationSun + accelerationMoon + accelerationRadiation + accelerationDrag
+
+		self.accelerations[1, :] = accelerationSun
+		self.accelerations[2, :] = accelerationMoon
+		self.accelerations[3, :] = accelerationRadiation
+		self.accelerations[4, :] = accelerationDrag
+
+		return np.array([*y[3:6], *a])
+
+	def rk4(self, y, t0, tf, h, kepOrGeo, solar, sunAndMoon, drag, C, S):
+		"""Runge-Kutta 4th Order Numerical Integrator
+			Args:
+				y(1x6 numpy array): the state vector [rx,ry,rz,vx,vy,vz]
+				t0(float)  : initial time
+				tf(float)  : final time
+				h(float)   : step-size
+			Returns:
+				1x6 numpy array: the state at time tf
+		"""
+
+		t = t0
+
+		if tf < t0:
+			h = -h
+
+		while(abs(tf-t) > 0.00001):
+			if (abs(tf-t) < abs(h)):
+				h = tf-t
+
+			# k1 = h*ydot(y)
+			# k2 = h*ydot(y+k1/2)
+			# k3 = h*ydot(y+k2/2)
+			# k4 = h*ydot(y+k3)
+
+			k1 = h * self.ydot(y, C, S, 10, 10, kepOrGeo, solar, sunAndMoon, drag)
+
+			self.keepAccelerations.append(self.accelerations)
+
+			k2 = h * self.ydot(y + k1 / 2, C, S, 10, 10, kepOrGeo, solar, sunAndMoon, drag)
+			k3 = h * self.ydot(y + k2 / 2, C, S, 10, 10, kepOrGeo, solar, sunAndMoon, drag)
+			k4 = h * self.ydot(y + k3, C, S, 10, 10, kepOrGeo, solar, sunAndMoon, drag)
+
+			self.keepStateVectors.append(y)
+
+			y = y+(k1+2*k2+2*k3+k4)/6
+
+			self.epochs.append(t)
+
+			t = t+h
+
+		return y
+
+	def accelerations_graph(self):
+
+		rcParams['figure.figsize'] = 15,10
+		fig, ax = plt.subplots()
+
+		wantedAcceleration = []
+		keepMean = []
+		for j in range(0, 5):
+			for i in range(0, len(self.keepAccelerations)):
+				wantedAcceleration.append(mp.sqrt(self.keepAccelerations[i][j, 0]**2 + self.keepAccelerations[j][1, 1]**2 + self.keepAccelerations[i][j, 2]**2))
+
+			keepMean.append(np.mean(wantedAcceleration))
+			wantedAcceleration = []
+
+		ax.barh(np.arange(len(keepMean)), keepMean, align='center')
+		ax.set_yticks(np.arange(len(keepMean)))
+		ax.set_yticklabels(("Earth", "Sun", "Moon", "Solar Radiation", "Atmospheric Drag"))
+		ax.invert_yaxis()
+		plt.show()
 
 
-def ydot(y, C, S, n, m, kepOrGeo, solar, sunAndMoon, drag):
-	"""Returns the time derivative of a given state.
-		Args:
-			y(1x6 numpy array): the state vector [rx,ry,rz,vx,vy,vz]
-		Returns:
-			1x6 numpy array: the time derivative of y [vx,vy,vz,ax,ay,az]
-	"""
-
-	mu = 398600.4405e+09
-	r = np.linalg.norm(y[0:3])
-
-	a = 0
-	accelerationMoon = 0
-	accelerationDrag = 0
-	accelerationSun = 0
-	accelerationRadiation = 0
-
-	if kepOrGeo == 1:
-		a = -mu/(r**3)*y[0:3]
-	elif kepOrGeo == 2:
-		a = ydot_geopotential(y, C, S, n, m)
-
-	bspFileName = 'de430.bsp'
-	positionSun, positionMoon = position_sun_moon(bspFileName)
-
-	if sunAndMoon is True:
-		accelerationSun, accelerationMoon = find_sun_moon_acc(y, positionSun, positionMoon)
-
-	if solar is True:
-		accelerationRadiation = get_solar_radiation_petrubation(positionSun, y[0:3], 0.5, 720, np.array([4.6, 2.34, 2.20]))
-
-	if drag is True:
-		accelerationDrag = find_drag_petrubation(2.1, 720, np.array([4.6, 2.34, 2.20]), y)
-
-	a = a + accelerationSun + accelerationMoon + accelerationRadiation + accelerationDrag
-
-	return np.array([*y[3:6], *a])
+	def earth_track_map(self):
+		pass
 
 
-def rk4(y, t0, tf, h, kepOrGeo, solar, sunAndMoon, drag, C, S):
-	"""Runge-Kutta 4th Order Numerical Integrator
-		Args:
-			y(1x6 numpy array): the state vector [rx,ry,rz,vx,vy,vz]
-			t0(float)  : initial time
-			tf(float)  : final time
-			h(float)   : step-size
-		Returns:
-			1x6 numpy array: the state at time tf
-	"""
 
-	t = t0
 
-	if tf < t0:
-		h = -h
 
-	while(abs(tf-t) > 0.00001):
-		if (abs(tf-t) < abs(h)):
-			h = tf-t
 
-		# k1 = h*ydot(y)
-		# k2 = h*ydot(y+k1/2)
-		# k3 = h*ydot(y+k2/2)
-		# k4 = h*ydot(y+k3)
+	# def keplerian_elements_graph(self):
+	#
 
-		k1 = h * ydot(y, C, S, 10, 10, kepOrGeo, solar, sunAndMoon, drag)
-		k2 = h * ydot(y + k1 / 2, C, S, 10, 10, kepOrGeo, solar, sunAndMoon, drag)
-		k3 = h * ydot(y + k2 / 2, C, S, 10, 10, kepOrGeo, solar, sunAndMoon, drag)
-		k4 = h * ydot(y + k3, C, S, 10, 10, kepOrGeo, solar, sunAndMoon, drag)
-
-		y = y+(k1+2*k2+2*k3+k4)/6
-		t = t+h
-
-	return y
 
 
 if __name__ == "__main__":
@@ -234,21 +285,27 @@ if __name__ == "__main__":
 	t0, tf = 0, 100.00
 	final = np.zeros((200, 6))
 
+	propagatorObj = propagator()
 	# restruct_geopotential_file("EGM2008.gfc")
-	data = read_geopotential_coeffs("restruct_EGM2008.gfc", False)
+	data = propagatorObj.read_geopotential_coeffs("restruct_EGM2008.gfc", False)
 	#
-	C, S = createNumpyArrayForCoeffs(data, 10, 10)
+	C, S = propagatorObj.createNumpyArrayForCoeffs(data, 10, 10)
 
 	# ydot_geopotential(y, C, S, 10, 10)
 	# ydot(y)
 
-	for i in range(0, 200):
-		final[i, :] = rk4(y, t0, tf, 2, 2, False, False, False, C, S)
+	for i in range(0, 1):
+		final[i, :] = propagatorObj.rk4(y, t0, tf, 2, 2, True, True, True, C, S)
 		t0 = tf
 		tf = tf + 100
 		y = final[i, :]
 		# print(i, mp.sqrt(y[0]**2+y[1]**2+y[2]**2) - 6378137)
 
-	plt.plot(np.sqrt(final[:, 0]**2 + final[:, 1]**2 + final[:, 2]**2))
-	plt.show()
+	propagatorObj.accelerations_graph()
+	# print(propagatorObj.keepStateVectors)
+
+
+
+	# plt.plot(np.sqrt(final[:, 0]**2 + final[:, 1]**2 + final[:, 2]**2))
+	# plt.show()
 
