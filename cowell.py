@@ -9,6 +9,9 @@ from sun_moon import find_sun_moon_acc, position_sun_moon
 from solar_radiation import get_solar_radiation_petrubation
 from atmo_drag import find_drag_petrubation
 from pylab import rcParams
+from state_kep import state_kep
+from anom_conv import true_to_ecc, ecc_to_mean, mean_to_t
+from teme_to_ecef import conv_to_ecef
 
 
 class propagator():
@@ -86,14 +89,14 @@ class propagator():
 		"""
 			Return Cnm and Snm in separate numpy arrays for certain degree n and order m
 		"""
-		C = np.zeros((n, m))
-		S = np.zeros((n, m))
+		C = np.zeros((n+1, m+1))
+		S = np.zeros((n+1, m+1))
 
 		for i in range(0, len(gravityCoeff)):
 			nIndex = gravityCoeff[i, 0]
 			mIndex = gravityCoeff[i, 1]
 
-			if (nIndex > n-1) or (mIndex > m-1):
+			if (nIndex > n) or (mIndex > m):
 				continue
 			else:
 				C[int(nIndex), int(mIndex)] = gravityCoeff[i, 2]
@@ -158,6 +161,69 @@ class propagator():
 		# print(ax, ay, az)
 		return np.array([ax, ay, az])
 
+	def geodynamic_model(self, y, C, S, n, m):
+
+		mu = 398600.4405e+09
+		R_ref = 6378137
+		r_sqr = np.dot(y[0:3], y[0:3])
+		rho = R_ref * R_ref / r_sqr
+
+		x0 = R_ref * y[0] / r_sqr
+		y0 = R_ref * y[1] / r_sqr
+		z0 = R_ref * y[2] / r_sqr
+
+		V = np.zeros((n + 2, m + 2))
+		W = np.zeros((n + 2, m + 2))
+
+		V[0, 0] = R_ref / np.sqrt(r_sqr)
+		W[0, 0] = 0.0
+
+		V[1, 0] = z0 * V[0, 0]
+		W[1, 0] = 0.0
+
+		for i in range(2, n + 2):
+			V[i, 0] = ((2 * i - 1) * z0 * V[i - 1, 0] - (i - 1) * rho * V[i - 2, 0]) / i
+			W[i, 0] = 0.0
+
+		for j in range(1, m + 2):
+
+			V[j, j] = (2 * j - 1) * (x0 * V[j - 1, j - 1] - y0 * W[j - 1, j - 1])
+			W[j, j] = (2 * j - 1) * (x0 * W[j - 1, j - 1] + y0 * V[j - 1, j - 1])
+
+			if j <= n:
+				V[j + 1, j] = (2 * j + 1) * z0 * V[j, j]
+				W[j + 1, j] = (2 * j + 1) * z0 * W[j, j]
+
+			for i in range(j + 2, n + 2):
+				V[i, j] = ((2 * i - 1) * z0 * V[i - 1, j] - (i + j - 1) * rho * V[i - 2, j]) / (i - j)
+				W[i, j] = ((2 * i - 1) * z0 * W[i - 1, j] - (i + j - 1) * rho * W[i - 2, j]) / (i - j)
+
+		ax = 0
+		ay = 0
+		az = 0
+
+		for j in range(0, m + 1):
+			for i in range(j, n + 1):
+
+				if j == 0:
+					ax -= C[i, j] * V[i + 1, 1]
+					ay -= C[i, j] * W[i + 1, 1]
+					az -= (i + 1) * C[i, j] * V[i + 1, 0]
+				else:
+					Fac = 0.5 * (i - j + 1) * (i - j + 2)
+					ax += 0.5 * (-C[i, j] * V[i + 1, j + 1] - S[i, j] * W[i + 1, j + 1]) + \
+						  Fac * (C[i, j] * V[i + 1, j - 1] + S[i, j] * W[i + 1, j - 1])
+
+					ay += 0.5 * (-C[i, j] * W[i + 1, j + 1] + S[i, j] * V[i + 1, j + 1]) + \
+						  Fac * (-C[i, j] * W[i + 1, j - 1] + S[i, j] * V[i + 1, j - 1])
+
+					az += ((i - j + 1) * (-C[i, j] * V[i + 1, j] - S[i, j] * W[i + 1, j]))
+
+			ax = (mu / R_ref ** 2) * ax
+			ay = (mu / R_ref ** 2) * ay
+			az = (mu / R_ref ** 2) * az
+			return np.array([ax, ay, az])
+
 	def ydot(self, y, C, S, n, m, kepOrGeo, solar, sunAndMoon, drag):
 		"""Returns the time derivative of a given state.
 			Args:
@@ -178,7 +244,7 @@ class propagator():
 		if kepOrGeo == 1:
 			a = -mu/(r**3)*y[0:3]
 		elif kepOrGeo == 2:
-			a = self.ydot_geopotential(y, C, S, n, m)
+			a = self.geodynamic_model(y, C, S, n, m)
 
 		self.accelerations[0, :] = a
 
@@ -248,7 +314,7 @@ class propagator():
 
 	def accelerations_graph(self):
 
-		rcParams['figure.figsize'] = 15,10
+		rcParams['figure.figsize'] = 12, 8
 		fig, ax = plt.subplots()
 
 		wantedAcceleration = []
@@ -257,31 +323,93 @@ class propagator():
 			for i in range(0, len(self.keepAccelerations)):
 				wantedAcceleration.append(mp.sqrt(self.keepAccelerations[i][j, 0]**2 + self.keepAccelerations[j][1, 1]**2 + self.keepAccelerations[i][j, 2]**2))
 
-			keepMean.append(np.mean(wantedAcceleration))
+			checkWith = np.max(wantedAcceleration)
+			if checkWith > 1:
+				if checkWith / 10 > 1:
+					if checkWith / 100 > 1:
+						finalwantedAcceleration = 3
+					else:
+						finalwantedAcceleration = 2
+				else:
+					finalwantedAcceleration = 1
+			else:
+				if checkWith * 10 < 1:
+					if checkWith * 100 < 1:
+						if checkWith * 1000 < 1:
+							if checkWith * 10000 < 1:
+								if checkWith * 100000 < 1:
+									if checkWith * 1000000 < 1:
+										if checkWith * 10000000 < 1:
+											finalwantedAcceleration = -8
+										else:
+											finalwantedAcceleration = -7
+									else:
+										finalwantedAcceleration = -6
+								else:
+									finalwantedAcceleration = -5
+							else:
+								finalwantedAcceleration = -4
+						else:
+							finalwantedAcceleration = -3
+					else:
+						finalwantedAcceleration = -2
+				else:
+					finalwantedAcceleration = -1
+
+			keepMean.append(finalwantedAcceleration)
 			wantedAcceleration = []
 
-		ax.barh(np.arange(len(keepMean)), keepMean, align='center')
-		ax.set_yticks(np.arange(len(keepMean)))
-		ax.set_yticklabels(("Earth", "Sun", "Moon", "Solar Radiation", "Atmospheric Drag"))
-		ax.invert_yaxis()
+		ax.bar(np.arange(len(keepMean)), keepMean, align='center')
+		ax.set_xticks(np.arange(len(keepMean)))
+		ax.set_xticklabels(("Earth", "Sun", "Moon", "Solar Radiation", "Atmospheric Drag"))
+		# ax.invert_yaxis()
 		plt.show()
 
+	def earth_track_map(self, time0):
 
-	def earth_track_map(self):
-		pass
+		unpackStateVectors = np.asarray(self.keepStateVectors)
 
+		print(unpackStateVectors)
+		y = np.mean(unpackStateVectors, 0)
+		y = y / 1000
+		kep = state_kep(y[0:3], y[3:6])
 
+		a = kep[0]
+		e = kep[1]
+		inc = mp.radians(kep[2])
+		t0 = mp.radians(kep[3])
+		lan = mp.radians(kep[4])
+		tanom = mp.radians(kep[5])
 
+		p_x = np.array([mp.cos(lan), mp.sin(lan), 0])
+		p_y = np.array([-mp.sin(lan) * mp.cos(inc), mp.cos(lan) * mp.cos(inc), mp.sin(inc)])
 
+		# generate 2000 points on the ellipse
+		theta = np.linspace(t0 + tanom, t0 + tanom + 4 * mp.pi, 2000)
+		radii = a * (1 - e ** 2) / (1 + e * np.cos(theta - t0))
 
+		# convert to cartesian
+		x_s = np.multiply(radii, np.cos(theta))
+		y_s = np.multiply(radii, np.sin(theta))
 
-	# def keplerian_elements_graph(self):
-	#
+		# convert to 3D
+		mat = np.column_stack((p_x, p_y))
+		coords_3D = np.matmul(mat, [x_s, y_s])
 
+		ecc = true_to_ecc(theta, e)
+		mean = ecc_to_mean(ecc, e)
+		times = mean_to_t(mean, a)
+		times += time0
+
+		coords_teme = np.column_stack((times, coords_3D[0], coords_3D[1], coords_3D[2]))
+		coords_ecef = conv_to_ecef(coords_teme)
+
+		return coords_ecef, times
 
 
 if __name__ == "__main__":
 	y = np.array([4.57158479e+06, -5.42842773e+06, 1.49451936e+04, -2.11034321e+02, -1.61886788e+02, 7.48942330e+03])
+
 	t0, tf = 0, 10000.00
 	final = np.zeros((200, 6))
 
@@ -305,8 +433,18 @@ if __name__ == "__main__":
 	state_vectors = np.asarray(propagatorObj.keepStateVectors)
 	# print(np.asarray(propagatorObj.keepStateVectors))
 
+	final = propagatorObj.rk4(y, t0, tf, 5, 2, True, True, True, C, S)
 
+
+	propagatorObj.earth_track_map(1521562500)
+	# print(propagatorObj.keepStateVectors)
+
+	# altitude = []
+	# for i in range(0, len(propagatorObj.keepStateVectors)):
+	# 	altitude.append(np.sqrt(propagatorObj.keepStateVectors[i][0] ** 2 + propagatorObj.keepStateVectors[i][
+	# 														1] ** 2 + propagatorObj.keepStateVectors[i][2] ** 2) - 6371000)
 
 	plt.plot(np.sqrt(state_vectors[:, 0]**2 + state_vectors[:, 1]**2 + state_vectors[:, 2]**2))
 	plt.show()
+
 
