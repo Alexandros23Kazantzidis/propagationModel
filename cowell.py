@@ -282,7 +282,7 @@ class propagator():
 
 if __name__ == "__main__":
 	y = np.array([4.57158479e+06, -5.42842773e+06, 1.49451936e+04, -2.11034321e+02, -1.61886788e+02, 7.48942330e+03])
-	t0, tf = 0, 100.00
+	t0, tf = 0, 10000.00
 	final = np.zeros((200, 6))
 
 	propagatorObj = propagator()
@@ -295,17 +295,18 @@ if __name__ == "__main__":
 	# ydot(y)
 
 	for i in range(0, 1):
-		final[i, :] = propagatorObj.rk4(y, t0, tf, 2, 2, True, True, True, C, S)
+		final[i, :] = propagatorObj.rk4(y, t0, tf, 2, 2, False, False, False, C, S)
 		t0 = tf
 		tf = tf + 100
 		y = final[i, :]
 		# print(i, mp.sqrt(y[0]**2+y[1]**2+y[2]**2) - 6378137)
 
-	propagatorObj.accelerations_graph()
-	# print(propagatorObj.keepStateVectors)
+	# propagatorObj.accelerations_graph()
+	state_vectors = np.asarray(propagatorObj.keepStateVectors)
+	# print(np.asarray(propagatorObj.keepStateVectors))
 
 
 
-	# plt.plot(np.sqrt(final[:, 0]**2 + final[:, 1]**2 + final[:, 2]**2))
-	# plt.show()
+	plt.plot(np.sqrt(state_vectors[:, 0]**2 + state_vectors[:, 1]**2 + state_vectors[:, 2]**2))
+	plt.show()
 

@@ -49,9 +49,33 @@ app.layout = html.Div([
 					{'label': 'Keplerian', 'value': 1},
 					{'label': 'Geodynamic Model', 'value': 2},
 				],
-				value=2
+				value=1
 			),
 			html.Br(),
+
+			html.Div(id="geodynamic-parameters", style={'display': 'none'}, children=[
+				dcc.Upload(
+					id='upload-data',
+					children=html.Div([
+						html.A('Upload Geodynamic Model')
+					]),
+					style={
+						'width': '100%',
+						'height': '60px',
+						'lineHeight': '60px',
+						'borderWidth': '1px',
+						'borderStyle': 'dashed',
+						'borderRadius': '5px',
+						'textAlign': 'center',
+					},
+					# Allow multiple files to be uploaded
+					multiple=False
+				),
+				html.Label('Order (n)', className="main"),
+				dcc.Input(value='20', type='text', id='order-geo', style={"margin-bottom": "5px"}),
+				html.Label('Degree (m)', className="main"),
+				dcc.Input(value='20', type='text', id='degree-geo', style={"margin-bottom": "5px"}),
+			]),
 
 			html.Label("Select other forces you want to include to the Model", className="main"),
 			dcc.Checklist(
@@ -61,8 +85,16 @@ app.layout = html.Div([
 					{'label': 'Solar Radiation', 'value': 2},
 					{'label': 'Atmospheric Drag', 'value': 3},
 				],
-				values=[]
-			,style={"text-align": "left"}),
+				values=[],
+				style={"text-align": "left"}),
+			html.Div(id="radiation-parameters", style={'display': 'none'}, children=[
+				html.Label('Solar Radiation Reflectivity - Absorption (e)', className="main"),
+				dcc.Input(value='0.8', type='text', id='solar-epsilon', style={"margin-bottom": "5px"}),
+			]),
+			html.Div(id="drag-parameters", style={'display': 'none'}, children=[
+				html.Label('Atmospheric Drag Coefficient (Cd)', className="main"),
+				dcc.Input(value='2.1', type='text', id='drag-coeff', style={"margin-bottom": "5px"}),
+			]),
 
 		], style={'margin': '20px'}),
 	], style={'display': 'inline-flex'}),
@@ -93,6 +125,7 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6):
 	if n_clicks == 0:
 		pass
 	else:
+		propagatorObj = cw.propagator()
 		y = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 		index = 0
 		parseInput1 = input1.split(",")
@@ -111,8 +144,8 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6):
 			other = list(input6)
 
 			if kepOrGeo == 2:
-				data = cw.read_geopotential_coeffs("restruct_EGM2008.gfc", False)
-				C, S = cw.createNumpyArrayForCoeffs(data, 10, 10)
+				data = propagatorObj.read_geopotential_coeffs("restruct_EGM2008.gfc", False)
+				C, S = propagatorObj.createNumpyArrayForCoeffs(data, 10, 10)
 			else:
 				C = 0
 				S = 0
@@ -136,7 +169,7 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6):
 			time = np.zeros(loopIndex)
 
 			for i in range(0, loopIndex):
-				final[i, :] = cw.rk4(y, t0, loopTf, step/50, kepOrGeo, solar, sunAndMoon, drag, C, S)
+				final[i, :] = propagatorObj.rk4(y, t0, loopTf, step/50, kepOrGeo, solar, sunAndMoon, drag, C, S)
 				time[i] = loopTf
 				t0 = loopTf
 				loopTf = loopTf + step

@@ -7,8 +7,35 @@ var body = document.getElementsByTagName("BODY")[0];
 
 console.log(body);
 
-body.onload = function () {
+window.onload = function () {
 
-    var elem = document.getElementById("earth-model");
-    console.log(elem.value);
+    $('span[role="option"]').on('DOMSubtreeModified',function(){
+        if ($('span[role="option"]').text() === "Keplerian") {
+            $("#geodynamic-parameters").css("display", "none");
+        } else {
+            $("#geodynamic-parameters").css("display", "block");
+        };
+    });
+
+    jQuery('#other-forces').find('input').attr("class","other-forces-inputs");
+    $('.other-forces-inputs')[0].className = "sun-moon-input"
+    $('.other-forces-inputs')[0].className = "radiation-input"
+    $('.other-forces-inputs')[0].className = "drag-input"
+
+    $('.radiation-input').change(function () {
+        if ($(this).is(":checked")) {
+            $('#radiation-parameters').css('display', 'block')
+        } else {
+            $('#radiation-parameters').css('display', 'none')
+        }
+    });
+
+    $('.drag-input').change(function () {
+        if ($(this).is(":checked")) {
+            $('#drag-parameters').css('display', 'block')
+        } else {
+            $('#drag-parameters').css('display', 'none')
+        }
+    });
 };
+
