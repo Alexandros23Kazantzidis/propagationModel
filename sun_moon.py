@@ -2,11 +2,13 @@ from jplephem.spk import SPK
 import julian
 import datetime
 import numpy as np
+import math as mp
 
 
 def position_sun_moon(bspFileName):
 
 	jd = julian.to_jd(datetime.datetime.now(), fmt='jd')
+	jd = 2458355.500000
 
 	kernel = SPK.open(bspFileName)
 	positionMoon = kernel[3, 301].compute(jd)
