@@ -12,7 +12,7 @@ window.onload = function () {
     $('span[role="option"]').on('DOMSubtreeModified',function(){
         if ($('span[role="option"]').text() === "Keplerian") {
             $("#geodynamic-parameters").css("display", "none");
-        } else {
+        } else if ($('span[role="option"]').text() === "Geodynamic Model") {
             $("#geodynamic-parameters").css("display", "block");
         };
     });

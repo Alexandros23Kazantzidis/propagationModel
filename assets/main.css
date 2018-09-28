@@ -1,5 +1,9 @@
 /* My custom styling */
 
+body {
+    background-color: #f5f4e9;
+}
+
 table {
   border-collapse: collapse;
    overflow-y:scroll;
