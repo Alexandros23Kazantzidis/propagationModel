@@ -8,8 +8,18 @@ table {
   border-collapse: collapse;
    overflow-y:scroll;
    height:400px;
-   width:100%;
+   width:fit-content;
    display:block;
+   margin:auto;
+}
+
+table#accel-table {
+  border-collapse: collapse;
+   overflow-y:scroll;
+   height:200px;
+   width:fit-content;
+   display:block;
+   margin:auto;
 }
 
 td, th {
@@ -29,6 +39,14 @@ td {
 }
 
 label.main {
+    font-size: 15pt;
+    font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
+    margin-top: 5px!important;
+    margin-bottom: 2px!important;
+    font-weight: bold;
+}
+
+label.second {
     font-size: 12pt;
     font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
     margin-top: 5px!important;

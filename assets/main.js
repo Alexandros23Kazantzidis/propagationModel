@@ -10,9 +10,9 @@ console.log(body);
 window.onload = function () {
 
     $('span[role="option"]').on('DOMSubtreeModified',function(){
-        if ($('span[role="option"]').text() === "Keplerian") {
+        if ($('span[role="option"]')[0].textContent === "Keplerian") {
             $("#geodynamic-parameters").css("display", "none");
-        } else if ($('span[role="option"]').text() === "Geodynamic Model") {
+        } else if ($('span[role="option"]')[0].textContent === "Geodynamic Model") {
             $("#geodynamic-parameters").css("display", "block");
         };
     });
@@ -37,5 +37,7 @@ window.onload = function () {
             $('#drag-parameters').css('display', 'none')
         }
     });
+
+    jQuery(".Select-clear").hide();
 };
 

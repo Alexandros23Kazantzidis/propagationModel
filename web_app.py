@@ -12,9 +12,12 @@ import pandas as pd
 import plotly.plotly as py
 import plotly.graph_objs as go
 
+pd.set_option("display.precision", 10)
 
 app = dash.Dash()
 app.title = 'Auth Propagation Model'
+
+propagatorObj = cw.propagator()
 
 app.layout = html.Div([
 
@@ -33,10 +36,13 @@ app.layout = html.Div([
 			dcc.Input(value='0', type='text', id='init-time', style={"margin-bottom": "5px"}),
 
 			html.Label('Final Time (sec)', className="main"),
-			dcc.Input(value='1000', type='text', id='final-time', style={"margin-bottom": "5px"}),
+			dcc.Input(value='500', type='text', id='final-time', style={"margin-bottom": "5px"}),
 
 			html.Label('Step Size (sec)', className="main"),
 			dcc.Input(value='100', type='text', id='step-size', style={"margin-bottom": "5px"}),
+
+			html.Label('Satellite Mass (kg)', className="main"),
+			dcc.Input(value='720', type='text', id='sat-mass', style={"margin-bottom": "5px"}),
 		], style={'margin': '20px', }),
 
 		html.Div(children=[
@@ -54,27 +60,26 @@ app.layout = html.Div([
 			html.Br(),
 
 			html.Div(id="geodynamic-parameters", style={'display': 'none'}, children=[
-				dcc.Upload(
-					id='upload-data',
-					children=html.Div([
-						html.A('Upload Geodynamic Model')
-					]),
-					style={
-						'width': '100%',
-						'height': '60px',
-						'lineHeight': '60px',
-						'borderWidth': '1px',
-						'borderStyle': 'dashed',
-						'borderRadius': '5px',
-						'textAlign': 'center',
-					},
-					# Allow multiple files to be uploaded
-					multiple=False
+				dcc.Dropdown(
+					id="geo-model-chose",
+					options=[
+						{'label': 'EGM08', 'value': 1},
+						{'label': 'EIGEN', 'value': 2},
+					],
+					value=1
 				),
-				html.Label('Order (n)', className="main"),
+
+				html.Label('Order (n)', className="second"),
 				dcc.Input(value='20', type='text', id='order-geo', style={"margin-bottom": "5px"}),
-				html.Label('Degree (m)', className="main"),
+				html.Label('Degree (m)', className="second"),
 				dcc.Input(value='20', type='text', id='degree-geo', style={"margin-bottom": "5px"}),
+
+				html.Br(),
+
+				html.Button(id="calculate-geo-button", children="Import Geodynamical Model", n_clicks=0, style={"margin-top": "5px"}),
+
+				html.Div(id="output-geo-coeff"),
+
 			]),
 
 			html.Label("Select other forces you want to include to the Model", className="main"),
@@ -103,7 +108,7 @@ app.layout = html.Div([
 
 		html.Button(children="Determine Satellite Orbit", id="calculate-orbit", n_clicks=0)
 
-	], style={'margin': '20px'}),
+	], style={'margin': '40px'}),
 
 	html.Div(id='output-state', style={'margin': '40px'})
 
@@ -112,20 +117,22 @@ app.layout = html.Div([
 
 
 @app.callback(Output('output-state', 'children'),
-				[Input('calculate-orbit', 'n_clicks')], [
-				State('state-vector', 'value'),
-				State('init-time', 'value'),
-				State('final-time', 'value'),
-				State('step-size', 'value'),
-				State('earth-model', 'value'),
-				State('other-forces', 'values'),
+				[Input('calculate-orbit', 'n_clicks')],
+				[State('state-vector', 'value'),
+				 State('init-time', 'value'),
+				 State('final-time', 'value'),
+				 State('step-size', 'value'),
+				 State('earth-model', 'value'),
+				 State('other-forces', 'values'),
+				 State('solar-epsilon', 'value'),
+				 State('drag-coeff', 'value'),
+				State('sat-mass', 'value'),
 				])
-def update_output(n_clicks, input1, input2, input3, input4, input5, input6):
+def update_output(n_clicks, input1, input2, input3, input4, input5, input6, input7, input8, input9):
 
 	if n_clicks == 0:
 		pass
 	else:
-		propagatorObj = cw.propagator()
 		y = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 		index = 0
 		parseInput1 = input1.split(",")
@@ -169,7 +176,7 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6):
 			time = np.zeros(loopIndex)
 
 			for i in range(0, loopIndex):
-				final[i, :] = propagatorObj.rk4(y, t0, loopTf, step/50, kepOrGeo, solar, sunAndMoon, drag, C, S)
+				final[i, :] = propagatorObj.rk4(y, t0, loopTf, step/50, kepOrGeo, solar, float(input7), sunAndMoon, drag, float(input8), C, S, float(input9))
 				time[i] = loopTf
 				t0 = loopTf
 				loopTf = loopTf + step
@@ -185,8 +192,25 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6):
 									   index=range(0, loopIndex),
 									   columns=["Time(sec)", "rx(m)", "ry(m)", "rz(m)", "vx(m/s)", "vy(m/s)", "vz(m/s)"])
 
+			propagatorObj.accelerations_graph(solar, sunAndMoon, drag)
+			beforeAccelTable = np.zeros((len(propagatorObj.tickLabels), 4))
+			for i in range(0, len(propagatorObj.tickLabels)):
+				beforeAccelTable[i, 0] = propagatorObj.keepAbsoluteAccelerations[i][0]
+				beforeAccelTable[i, 1] = propagatorObj.keepAbsoluteAccelerations[i][1]
+				beforeAccelTable[i, 2] = propagatorObj.keepAbsoluteAccelerations[i][2]
+				beforeAccelTable[i, 3] = propagatorObj.keepAbsoluteAccelerations[i][3]
 
-			return html.Div(children=[ html.Table(
+			returnAcceTable = pd.DataFrame(
+				data=beforeAccelTable,
+				index=propagatorObj.tickLabels,
+				columns=["Max", "Min", "Average", "STD"]
+			)
+
+			returnAcceTable.insert(0, "Source", returnAcceTable.index)
+
+			print(returnAcceTable)
+
+			return html.Div(children=[html.Table(
 				# Header
 				[html.Tr([html.Th(col) for col in returnTable.columns])] +
 
@@ -194,7 +218,8 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6):
 				[html.Tr([
 					html.Td(returnTable.iloc[i][col]) for col in returnTable.columns
 				]) for i in range(min(len(returnTable), loopIndex))]
-			)],style={"padding-left": "20%"}), html.Br(), \
+			)], style={"padding-left": "25%", "padding-right": "25%"}),\
+			html.Br(),\
 			dcc.Graph(
 				id='alitutde-graph',
 				figure={
@@ -204,9 +229,49 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6):
 							y=altitude,
 							opacity=0.7,
 						)
-					],
+					], 'layout': {'title': 'Altitude (m)'}
 				}
-			)
+			), \
+				   html.Div(children=[html.Table(
+				# Header
+				[html.Tr([html.Th(col) for col in returnAcceTable.columns])] +
+
+				# Body
+				[html.Tr([
+					html.Td(returnAcceTable.iloc[i][col]) for col in returnAcceTable.columns
+				]) for i in range(min(len(returnAcceTable), loopIndex))]
+			, id="accel-table")], style={"padding-left": "25%", "padding-right": "25%", "padding-top": "20px", "padding-bottom": "20px"}),\
+			dcc.Graph(
+				id='accel-sizes',
+				figure={
+					'data': [
+						{'x': propagatorObj.tickLabels,
+						 'y': propagatorObj.accelerationsGraph,
+						 'type': 'bar'}
+					], 'layout': {'title': 'Accelerations Order of Magnitude'}
+				}
+			),
+
+
+
+@app.callback(Output('output-geo-coeff', 'children'),
+			  	[Input("calculate-geo-button", "n_clicks")],
+				[State('geo-model-chose', 'value'),
+				State('order-geo', 'value'),
+				 State('degree-geo', 'value'),
+				])
+def choose_geo_model(n_clicks, input1, input2, input3):
+
+	if n_clicks != 0:
+		input2 = int(input2)
+		input3 = int(input3)
+		if input1 == 1:
+			data = propagatorObj.read_geopotential_coeffs("restruct_EGM2008.gfc", False)
+			C, S = propagatorObj.createNumpyArrayForCoeffs(data, input2, input3)
+		else:
+			pass
+
+		n_clicks = 0
 
 
 if __name__ == '__main__':

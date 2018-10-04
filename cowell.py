@@ -224,7 +224,7 @@ class propagator():
 			az = (mu / R_ref ** 2) * az
 			return np.array([ax, ay, az])
 
-	def ydot(self, y, C, S, n, m, kepOrGeo, solar, sunAndMoon, drag):
+	def ydot(self, y, C, S, n, m, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, satMass):
 		"""Returns the time derivative of a given state.
 			Args:
 				y(1x6 numpy array): the state vector [rx,ry,rz,vx,vy,vz]
@@ -255,10 +255,10 @@ class propagator():
 			accelerationSun, accelerationMoon = find_sun_moon_acc(y, positionSun, positionMoon)
 
 		if solar is True:
-			accelerationRadiation = get_solar_radiation_petrubation(positionSun, y[0:3], 0.5, 720, np.array([4.6, 2.34, 2.20]))
+			accelerationRadiation = get_solar_radiation_petrubation(positionSun, y[0:3], solarEpsilon, satMass, np.array([4.6, 2.34, 2.20]))
 
 		if drag is True:
-			accelerationDrag = find_drag_petrubation(2.1, 720, np.array([4.6, 2.34, 2.20]), y)
+			accelerationDrag = find_drag_petrubation(dragCoeff, satMass, np.array([4.6, 2.34, 2.20]), y)
 
 		a = a + accelerationSun + accelerationMoon + accelerationRadiation + accelerationDrag
 
@@ -269,7 +269,7 @@ class propagator():
 
 		return np.array([*y[3:6], *a])
 
-	def rk4(self, y, t0, tf, h, kepOrGeo, solar, sunAndMoon, drag, C, S):
+	def rk4(self, y, t0, tf, h, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, C, S, satMass):
 		"""Runge-Kutta 4th Order Numerical Integrator
 			Args:
 				y(1x6 numpy array): the state vector [rx,ry,rz,vx,vy,vz]
@@ -294,13 +294,13 @@ class propagator():
 			# k3 = h*ydot(y+k2/2)
 			# k4 = h*ydot(y+k3)
 
-			k1 = h * self.ydot(y, C, S, 10, 10, kepOrGeo, solar, sunAndMoon, drag)
+			k1 = h * self.ydot(y, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, satMass)
 
-			self.keepAccelerations.append(self.accelerations)
+			self.keepAccelerations.append(np.copy(self.accelerations))
 
-			k2 = h * self.ydot(y + k1 / 2, C, S, 10, 10, kepOrGeo, solar, sunAndMoon, drag)
-			k3 = h * self.ydot(y + k2 / 2, C, S, 10, 10, kepOrGeo, solar, sunAndMoon, drag)
-			k4 = h * self.ydot(y + k3, C, S, 10, 10, kepOrGeo, solar, sunAndMoon, drag)
+			k2 = h * self.ydot(y + k1 / 2, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, satMass)
+			k3 = h * self.ydot(y + k2 / 2, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, satMass)
+			k4 = h * self.ydot(y + k3, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, satMass)
 
 			self.keepStateVectors.append(y)
 
@@ -312,18 +312,20 @@ class propagator():
 
 		return y
 
-	def accelerations_graph(self):
+	def accelerations_graph(self, solar, sunAndMoon, drag,):
 
-		rcParams['figure.figsize'] = 12, 8
-		fig, ax = plt.subplots()
+		# rcParams['figure.figsize'] = 12, 8
+		# fig, ax = plt.subplots()
 
+		self.keepAbsoluteAccelerations = []
 		wantedAcceleration = []
 		keepMean = []
 		for j in range(0, 5):
 			for i in range(0, len(self.keepAccelerations)):
-				wantedAcceleration.append(mp.sqrt(self.keepAccelerations[i][j, 0]**2 + self.keepAccelerations[j][1, 1]**2 + self.keepAccelerations[i][j, 2]**2))
+				wantedAcceleration.append(mp.sqrt(self.keepAccelerations[i][j, 0]**2 + self.keepAccelerations[i][j, 1]**2 + self.keepAccelerations[i][j, 2]**2))
 
-			checkWith = np.max(wantedAcceleration)
+			checkWith = np.mean(wantedAcceleration)
+			self.keepAbsoluteAccelerations.append([np.max(wantedAcceleration), np.min(wantedAcceleration), checkWith, np.std(wantedAcceleration)])
 			if checkWith > 1:
 				if checkWith / 10 > 1:
 					if checkWith / 100 > 1:
@@ -359,11 +361,24 @@ class propagator():
 			keepMean.append(finalwantedAcceleration)
 			wantedAcceleration = []
 
-		ax.bar(np.arange(len(keepMean)), keepMean, align='center')
-		ax.set_xticks(np.arange(len(keepMean)))
-		ax.set_xticklabels(("Earth", "Sun", "Moon", "Solar Radiation", "Atmospheric Drag"))
-		# ax.invert_yaxis()
-		plt.show()
+		self.accelerationsGraph = keepMean
+
+		self.tickLabels = []
+		self.tickLabels.append("Earth")
+		if sunAndMoon == True:
+			self.tickLabels.append("Sun")
+			self.tickLabels.append("Moon")
+
+		if solar == True:
+			self.tickLabels.append("Radiation")
+
+		if drag == True:
+			self.tickLabels.append("Drag")
+
+		# ax.bar(np.arange(len(keepMean)), keepMean, align='center')
+		# ax.set_xticks(np.arange(len(keepMean)))
+		# ax.set_xticklabels(("Earth", "Sun", "Moon", "Solar Radiation", "Atmospheric Drag"))
+		# plt.show()
 
 	def earth_track_map(self, time0):
 
@@ -410,7 +425,7 @@ class propagator():
 if __name__ == "__main__":
 	y = np.array([4.57158479e+06, -5.42842773e+06, 1.49451936e+04, -2.11034321e+02, -1.61886788e+02, 7.48942330e+03])
 
-	t0, tf = 0, 100.00
+	t0, tf = 0, 2000.00
 	final = np.zeros((200, 6))
 
 	propagatorObj = propagator()
@@ -423,15 +438,15 @@ if __name__ == "__main__":
 	# ydot(y)
 
 	for i in range(0, 1):
-		final[i, :] = propagatorObj.rk4(y, t0, tf, 2, 2, True, True, True, C, S)
+		final[i, :] = propagatorObj.rk4(y, t0, tf, 2, 2, True, 0.5, True, True, 2.1, C, S, 720)
 		t0 = tf
 		tf = tf + 100
 		y = final[i, :]
 		# print(i, mp.sqrt(y[0]**2+y[1]**2+y[2]**2) - 6378137)
 
-	propagatorObj.accelerations_graph()
-	state_vectors = np.asarray(propagatorObj.keepStateVectors)
-	# print(np.asarray(propagatorObj.keepStateVectors))
+	propagatorObj.accelerations_graph(True,True,True)
+	# state_vectors = np.asarray(propagatorObj.keepStateVectors)
+	print(propagatorObj.keepAbsoluteAccelerations)
 
 	# final = propagatorObj.rk4(y, t0, tf, 5, 2, True, True, True, C, S)
 
