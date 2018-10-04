@@ -12,6 +12,7 @@ from pylab import rcParams
 from state_kep import state_kep
 from anom_conv import true_to_ecc, ecc_to_mean, mean_to_t
 from teme_to_ecef import conv_to_ecef
+import pandas as pd
 
 
 class propagator():
@@ -381,6 +382,9 @@ class propagator():
 		# plt.show()
 
 	def earth_track_map(self, time0):
+		"""
+		deprecated for now 
+		"""
 
 		unpackStateVectors = np.asarray(self.keepStateVectors)
 
@@ -421,11 +425,41 @@ class propagator():
 
 		return coords_ecef, times
 
+	def keplerian_elements_graph(self):
+
+		usableStateVector = np.asarray(self.keepStateVectors)
+		keepKepElements = np.zeros((len(self.keepStateVectors), 6))
+		for i in range(0, len(usableStateVector)):
+			r = usableStateVector[i, 0:3] / 1000
+			v = usableStateVector[i, 3:6] / 1000
+			keepKepElements[i, 0] = state_kep(r, v)[0]
+			keepKepElements[i, 1] = state_kep(r, v)[1]
+			keepKepElements[i, 2] = state_kep(r, v)[2]
+			keepKepElements[i, 3] = state_kep(r, v)[3]
+			keepKepElements[i, 4] = state_kep(r, v)[4]
+			keepKepElements[i, 5] = state_kep(r, v)[5]
+
+		keepStatisticKep = np.zeros((6, 4))
+		keepStatisticKep[:, 0] = np.max(keepKepElements, axis=0)
+		keepStatisticKep[:, 1] = np.min(keepKepElements, axis=0)
+		keepStatisticKep[:, 2] = np.mean(keepKepElements, axis=0)
+		keepStatisticKep[:, 3] = np.std(keepKepElements, axis=0)
+
+		returnStatisticKepTable = pd.DataFrame(
+			data=keepStatisticKep,
+			index=["Semi Majox Axis", "Eccentricity", "Inclination", "Argument of Perigee", "Longitude of the ascending node", "True anomaly"],
+			columns=["Max", "Min", "Average", "STD"]
+		)
+		returnStatisticKepTable.insert(0, "Keplerian Element", returnStatisticKepTable.index)
+
+		return returnStatisticKepTable, keepKepElements
+		# print(keepKepElements[0, :], self.epochs[0])
+		# print(keepKepElements[-1, :], self.epochs[-1])
 
 if __name__ == "__main__":
 	y = np.array([4.57158479e+06, -5.42842773e+06, 1.49451936e+04, -2.11034321e+02, -1.61886788e+02, 7.48942330e+03])
 
-	t0, tf = 0, 2000.00
+	t0, tf = 0, 500.00
 	final = np.zeros((200, 6))
 
 	propagatorObj = propagator()
@@ -444,9 +478,10 @@ if __name__ == "__main__":
 		y = final[i, :]
 		# print(i, mp.sqrt(y[0]**2+y[1]**2+y[2]**2) - 6378137)
 
-	propagatorObj.accelerations_graph(True,True,True)
+	# propagatorObj.accelerations_graph(True,True,True)
 	# state_vectors = np.asarray(propagatorObj.keepStateVectors)
-	print(propagatorObj.keepAbsoluteAccelerations)
+	propagatorObj.keplerian_elements_graph()
+	propagatorObj.keplerian_elements_graph()
 
 	# final = propagatorObj.rk4(y, t0, tf, 5, 2, True, True, True, C, S)
 

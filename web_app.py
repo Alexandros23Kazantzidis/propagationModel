@@ -11,6 +11,7 @@ import math as mp
 import pandas as pd
 import plotly.plotly as py
 import plotly.graph_objs as go
+from plotly import tools
 
 pd.set_option("display.precision", 10)
 
@@ -208,49 +209,122 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
 
 			returnAcceTable.insert(0, "Source", returnAcceTable.index)
 
-			print(returnAcceTable)
+			if len(propagatorObj.tickLabels) == 1:
+				depends = "accel-sizes-hide"
+			else:
+				depends = "accel-sizes"
 
-			return html.Div(children=[html.Table(
-				# Header
-				[html.Tr([html.Th(col) for col in returnTable.columns])] +
+			# Keplerian Elements Graph
+			returnStaticKepTable, kepElements = propagatorObj.keplerian_elements_graph()
 
-				# Body
-				[html.Tr([
-					html.Td(returnTable.iloc[i][col]) for col in returnTable.columns
-				]) for i in range(min(len(returnTable), loopIndex))]
-			)], style={"padding-left": "25%", "padding-right": "25%"}),\
-			html.Br(),\
-			dcc.Graph(
-				id='alitutde-graph',
-				figure={
-					'data': [
-						go.Scatter(
-							x=time,
-							y=altitude,
-							opacity=0.7,
-						)
-					], 'layout': {'title': 'Altitude (m)'}
-				}
-			), \
-				   html.Div(children=[html.Table(
-				# Header
-				[html.Tr([html.Th(col) for col in returnAcceTable.columns])] +
+			trace1 = go.Scatter(
+				x=propagatorObj.epochs,
+				y=kepElements[:, 0],
+				opacity=0.7,
+			)
+			trace2 = go.Scatter(
+				x=propagatorObj.epochs,
+				y=kepElements[:, 1],
+				opacity=0.7,
+			)
+			trace3 = go.Scatter(
+				x=propagatorObj.epochs,
+				y=kepElements[:, 2],
+				opacity=0.7,
+			)
+			trace4 = go.Scatter(
+				x=propagatorObj.epochs,
+				y=kepElements[:, 3],
+				opacity=0.7,
+			)
+			trace5 = go.Scatter(
+				x=propagatorObj.epochs,
+				y=kepElements[:, 4],
+				opacity=0.7,
+			)
+			trace6 = go.Scatter(
+				x=propagatorObj.epochs,
+				y=kepElements[:, 5],
+				opacity=0.7,
+			)
+			fig = tools.make_subplots(rows=3, cols=2, specs=[[{}, {}], [{}, {}], [{}, {}]],
+									  subplot_titles=('Semi Major Axis(km)', 'Eccentricity(float)',
+													'Inclination(Degrees)', 'Argument of Perigee(degrees)',
+													"Longitude of the ascending node", "True anomaly"),
+									  shared_xaxes=True, vertical_spacing=0.1)
+			fig.append_trace(trace1, 1, 1)
+			fig.append_trace(trace2, 1, 2)
+			fig.append_trace(trace3, 2, 1)
+			fig.append_trace(trace4, 2, 2)
+			fig.append_trace(trace5, 3, 1)
+			fig.append_trace(trace6, 3, 2)
 
-				# Body
-				[html.Tr([
-					html.Td(returnAcceTable.iloc[i][col]) for col in returnAcceTable.columns
-				]) for i in range(min(len(returnAcceTable), loopIndex))]
-			, id="accel-table")], style={"padding-left": "25%", "padding-right": "25%", "padding-top": "20px", "padding-bottom": "20px"}),\
-			dcc.Graph(
-				id='accel-sizes',
-				figure={
-					'data': [
-						{'x': propagatorObj.tickLabels,
-						 'y': propagatorObj.accelerationsGraph,
-						 'type': 'bar'}
-					], 'layout': {'title': 'Accelerations Order of Magnitude'}
-				}
-			),
+			fig['layout'].update(height=1000, title='Keplerian Elements', showlegend=False)
+
+			return html.Div(children=
+						[html.Table(
+							# Header
+							[html.Tr([html.Th(col) for col in returnTable.columns])] +
+
+							# Body
+							[html.Tr([
+								html.Td(returnTable.iloc[i][col]) for col in returnTable.columns
+							]) for i in range(min(len(returnTable), loopIndex))]
+						)], style={"padding-left": "25%", "padding-right": "25%"}),\
+					html.Br(),\
+					dcc.Graph(
+						id='alitutde-graph',
+						figure={
+							'data': [
+								go.Scatter(
+									x=time,
+									y=altitude,
+									opacity=0.7,
+								)
+							], 'layout': {'title': 'Altitude (m)'}
+						}
+					), \
+					\
+					\
+				   html.Div(children=
+					   [html.Table(
+						# Header
+						[html.Tr([html.Th(col) for col in returnStaticKepTable.columns])] +
+
+						# Body
+						[html.Tr([
+							html.Td(returnStaticKepTable.iloc[i][col]) for col in returnStaticKepTable.columns
+						]) for i in range(min(len(returnStaticKepTable), loopIndex))]
+						, id="kep-table")], style={"padding": "20px 25%", "margin": "25px 0px"}), \
+				   html.Br(), \
+				   dcc.Graph(
+						id="kep-graph",
+						figure=fig
+					), \
+					\
+					\
+					html.Div(children=
+						[html.Table(
+							# Header
+							[html.Tr([html.Th(col) for col in returnAcceTable.columns])] +
+
+							# Body
+							[html.Tr([
+								html.Td(returnAcceTable.iloc[i][col]) for col in returnAcceTable.columns
+							]) for i in range(min(len(returnAcceTable), loopIndex))]
+							, id="accel-table")], style={"padding": "20px 25%", "margin": "25px 0px"}), \
+					html.Br(), \
+					dcc.Graph(
+						id=depends,
+						figure={
+							'data': [
+								{'x': propagatorObj.tickLabels,
+								 'y': propagatorObj.accelerationsGraph,
+								 'type': 'bar'}
+							], 'layout': {'title': 'Accelerations Order of Magnitude'}
+						}
+					),
+
 
 
 
