@@ -17,6 +17,7 @@ pd.set_option("display.precision", 10)
 
 app = dash.Dash()
 app.title = 'Auth Propagation Model'
+app.config['suppress_callback_exceptions']=True
 
 propagatorObj = cw.propagator()
 
@@ -270,7 +271,9 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
 							[html.Tr([
 								html.Td(returnTable.iloc[i][col]) for col in returnTable.columns
 							]) for i in range(min(len(returnTable), loopIndex))]
-						)], style={"padding-left": "25%", "padding-right": "25%"}),\
+						)], style={"padding": "20px 25%"}),\
+					html.Div(id="info-download-state"), \
+					html.Button(children="Download State Vectors", id="download-state-vectors", n_clicks=0), \
 					html.Br(),\
 					dcc.Graph(
 						id='alitutde-graph',
@@ -296,6 +299,7 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
 							html.Td(returnStaticKepTable.iloc[i][col]) for col in returnStaticKepTable.columns
 						]) for i in range(min(len(returnStaticKepTable), loopIndex))]
 						, id="kep-table")], style={"padding": "20px 25%", "margin": "25px 0px"}), \
+				   html.Button(children="Download Keplerian Elements", id="download-kep-elements", n_clicks=0), \
 				   html.Br(), \
 				   dcc.Graph(
 						id="kep-graph",
@@ -313,7 +317,8 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
 								html.Td(returnAcceTable.iloc[i][col]) for col in returnAcceTable.columns
 							]) for i in range(min(len(returnAcceTable), loopIndex))]
 							, id="accel-table")], style={"padding": "20px 25%", "margin": "25px 0px"}), \
-					html.Br(), \
+                    html.Button(children="Download Acceleration Vectors", id="download-accel-vectors", n_clicks=0), \
+				    html.Br(), \
 					dcc.Graph(
 						id=depends,
 						figure={
@@ -346,6 +351,16 @@ def choose_geo_model(n_clicks, input1, input2, input3):
 			pass
 
 		n_clicks = 0
+
+
+@app.callback(Output('info-download-state', 'children'),
+			  	[Input("download-state-vectors", "n_clicks")])
+def download_state_vectors(n_clicks):
+
+	if n_clicks != 0:
+
+		propagatorObj.download_state_vectors()
+		return html.Label('The State Vectors csv has been created', className="info-message", id="catch")
 
 
 if __name__ == '__main__':

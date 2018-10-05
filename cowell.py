@@ -13,6 +13,7 @@ from state_kep import state_kep
 from anom_conv import true_to_ecc, ecc_to_mean, mean_to_t
 from teme_to_ecef import conv_to_ecef
 import pandas as pd
+import datetime
 
 
 class propagator():
@@ -456,6 +457,15 @@ class propagator():
 		# print(keepKepElements[0, :], self.epochs[0])
 		# print(keepKepElements[-1, :], self.epochs[-1])
 
+	def download_state_vectors(self):
+
+		filename = "state " + str(datetime.datetime.time(datetime.datetime.now())) + ".csv"
+		finalPrintArray = np.zeros((len(self.keepStateVectors), 7))
+		finalPrintArray[:, 0] = self.epochs
+		finalPrintArray[:, 1:] = np.asarray(self.keepStateVectors)[:, :]
+		np.savetxt(filename, finalPrintArray, delimiter=",")
+
+
 if __name__ == "__main__":
 	y = np.array([4.57158479e+06, -5.42842773e+06, 1.49451936e+04, -2.11034321e+02, -1.61886788e+02, 7.48942330e+03])
 
@@ -480,8 +490,8 @@ if __name__ == "__main__":
 
 	# propagatorObj.accelerations_graph(True,True,True)
 	# state_vectors = np.asarray(propagatorObj.keepStateVectors)
-	propagatorObj.keplerian_elements_graph()
-	propagatorObj.keplerian_elements_graph()
+	propagatorObj.download_state_vectors()
+	# propagatorObj.keplerian_elements_graph()
 
 	# final = propagatorObj.rk4(y, t0, tf, 5, 2, True, True, True, C, S)
 

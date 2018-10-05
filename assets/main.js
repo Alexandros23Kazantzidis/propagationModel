@@ -39,7 +39,5 @@ window.onload = function () {
     });
 
     jQuery(".Select-clear").hide();
-
-
 };
 
