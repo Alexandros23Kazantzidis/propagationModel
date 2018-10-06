@@ -174,21 +174,13 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
 
 			loopTf = step
 			loopIndex = int((tf - t0) / step)
-			final = np.zeros((loopIndex, 6))
-			time = np.zeros(loopIndex)
 
-			for i in range(0, loopIndex):
-				final[i, :] = propagatorObj.rk4(y, t0, loopTf, step/50, kepOrGeo, solar, float(input7), sunAndMoon, drag, float(input8), C, S, float(input9))
-				time[i] = loopTf
-				t0 = loopTf
-				loopTf = loopTf + step
-				y = final[i, :]
-				print(t0, loopTf)
+			y = propagatorObj.rk4(y, t0, tf, step, kepOrGeo, solar, float(input7), sunAndMoon, drag, float(input8), C, S, float(input9))
 
-			altitude = np.sqrt(final[:, 0]**2 + final[:, 1]**2 + final[:, 2]**2)
+			altitude = np.sqrt(np.asarray(propagatorObj.keepStateVectors)[:, 0]**2 + np.asarray(propagatorObj.keepStateVectors)[:, 1]**2 + np.asarray(propagatorObj.keepStateVectors)[:, 2]**2)
 			beforeDataFrame = np.zeros((loopIndex, 7))
-			beforeDataFrame[:, 1:7] = final[:]
-			beforeDataFrame[:, 0] = time[:]
+			beforeDataFrame[:, 1:7] = propagatorObj.keepStateVectors[:]
+			beforeDataFrame[:, 0] = propagatorObj.epochs[:]
 
 			returnTable = pd.DataFrame(data=beforeDataFrame[:, :],
 									   index=range(0, loopIndex),
@@ -217,6 +209,8 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
 
 			# Keplerian Elements Graph
 			returnStaticKepTable, kepElements = propagatorObj.keplerian_elements_graph()
+			print(len(propagatorObj.epochs))
+			print(len(kepElements))
 
 			trace1 = go.Scatter(
 				x=propagatorObj.epochs,
@@ -280,7 +274,7 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
 						figure={
 							'data': [
 								go.Scatter(
-									x=time,
+									x=propagatorObj.epochs,
 									y=altitude,
 									opacity=0.7,
 								)

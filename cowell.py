@@ -283,6 +283,9 @@ class propagator():
 		"""
 
 		t = t0
+		self.keepAccelerations = []
+		self.keepStateVectors = []
+		self.epochs = []
 
 		if tf < t0:
 			h = -h
@@ -433,12 +436,7 @@ class propagator():
 		for i in range(0, len(usableStateVector)):
 			r = usableStateVector[i, 0:3] / 1000
 			v = usableStateVector[i, 3:6] / 1000
-			keepKepElements[i, 0] = state_kep(r, v)[0]
-			keepKepElements[i, 1] = state_kep(r, v)[1]
-			keepKepElements[i, 2] = state_kep(r, v)[2]
-			keepKepElements[i, 3] = state_kep(r, v)[3]
-			keepKepElements[i, 4] = state_kep(r, v)[4]
-			keepKepElements[i, 5] = state_kep(r, v)[5]
+			keepKepElements[i, :] = state_kep(r, v)[:]
 
 		keepStatisticKep = np.zeros((6, 4))
 		keepStatisticKep[:, 0] = np.max(keepKepElements, axis=0)
@@ -454,12 +452,13 @@ class propagator():
 		returnStatisticKepTable.insert(0, "Keplerian Element", returnStatisticKepTable.index)
 
 		return returnStatisticKepTable, keepKepElements
-		# print(keepKepElements[0, :], self.epochs[0])
-		# print(keepKepElements[-1, :], self.epochs[-1])
+
 
 	def download_state_vectors(self):
 
-		filename = "state " + str(datetime.datetime.time(datetime.datetime.now())) + ".csv"
+		datestr = str(datetime.datetime.time(datetime.datetime.now())).replace(":", "")
+		datestr = datestr.replace(".", "")
+		filename = "state_" + datestr + ".csv"
 		finalPrintArray = np.zeros((len(self.keepStateVectors), 7))
 		finalPrintArray[:, 0] = self.epochs
 		finalPrintArray[:, 1:] = np.asarray(self.keepStateVectors)[:, :]
