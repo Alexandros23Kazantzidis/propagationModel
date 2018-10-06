@@ -62,9 +62,18 @@ label.second {
 .info-message {
     -webkit-animation: fadeOut 2s forwards;
     animation: fadeOut 2s forwards;
-    -webkit-animation-delay: 3s;
-    animation-delay: 3s;
-    background: #d26c8d91;
+    -webkit-animation-delay: 2s;
+    animation-delay: 2s;
+    background: #45924b91;
+    color: white;
+    padding: 10px;
+    text-align: center;
+}
+
+.info-error {
+    -webkit-animation-delay: 2s;
+    animation-delay: 2s;
+    background: #ad4545;
     color: white;
     padding: 10px;
     text-align: center;

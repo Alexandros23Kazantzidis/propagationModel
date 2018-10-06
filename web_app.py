@@ -351,10 +351,13 @@ def choose_geo_model(n_clicks, input1, input2, input3):
 			  	[Input("download-state-vectors", "n_clicks")])
 def download_state_vectors(n_clicks):
 
-	if n_clicks != 0:
-
+	if n_clicks == 1:
 		propagatorObj.download_state_vectors()
 		return html.Label('The State Vectors csv has been created', className="info-message", id="catch")
+	elif n_clicks == 0:
+		pass
+	else:
+		return html.Label('Error! The State Vectors csv has already been created', className="info-error", id="catch")
 
 
 if __name__ == '__main__':
