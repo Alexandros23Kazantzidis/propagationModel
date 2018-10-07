@@ -293,6 +293,7 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
 							html.Td(returnStaticKepTable.iloc[i][col]) for col in returnStaticKepTable.columns
 						]) for i in range(min(len(returnStaticKepTable), loopIndex))]
 						, id="kep-table")], style={"padding": "20px 25%", "margin": "25px 0px"}), \
+				   html.Div(id="info-download-kep"), \
 				   html.Button(children="Download Keplerian Elements", id="download-kep-elements", n_clicks=0), \
 				   html.Br(), \
 				   dcc.Graph(
@@ -311,7 +312,8 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
 								html.Td(returnAcceTable.iloc[i][col]) for col in returnAcceTable.columns
 							]) for i in range(min(len(returnAcceTable), loopIndex))]
 							, id="accel-table")], style={"padding": "20px 25%", "margin": "25px 0px"}), \
-                    html.Button(children="Download Acceleration Vectors", id="download-accel-vectors", n_clicks=0), \
+				   html.Div(id="info-download-accel"), \
+				   html.Button(children="Download Acceleration Vectors", id="download-accel-vectors", n_clicks=0), \
 				    html.Br(), \
 					dcc.Graph(
 						id=depends,
@@ -353,11 +355,37 @@ def download_state_vectors(n_clicks):
 
 	if n_clicks == 1:
 		propagatorObj.download_state_vectors()
-		return html.Label('The State Vectors csv has been created', className="info-message", id="catch")
+		return html.Label('The State Vectors csv has been created', className="info-message")
 	elif n_clicks == 0:
 		pass
 	else:
-		return html.Label('Error! The State Vectors csv has already been created', className="info-error", id="catch")
+		return html.Label('Error! The State Vectors csv has already been created', className="info-error")
+
+
+@app.callback(Output('info-download-kep', 'children'),
+			  	[Input("download-kep-elements", "n_clicks")])
+def download_state_vectors(n_clicks):
+
+	if n_clicks == 1:
+		propagatorObj.download_kep_vectors()
+		return html.Label('The Keplerian Elements csv has been created', className="info-message")
+	elif n_clicks == 0:
+		pass
+	else:
+		return html.Label('Error! The Keplerian Elements csv has already been created', className="info-error")
+
+
+@app.callback(Output('info-download-accel', 'children'),
+			  	[Input("download-accel-vectors", "n_clicks")])
+def download_state_vectors(n_clicks):
+
+	if n_clicks == 1:
+		propagatorObj.download_accel_vectors()
+		return html.Label('The Acceleration Vectors csv has been created', className="info-message")
+	elif n_clicks == 0:
+		pass
+	else:
+		return html.Label('Error! The Acceleration Vectors csv has already been created', className="info-error")
 
 
 if __name__ == '__main__':

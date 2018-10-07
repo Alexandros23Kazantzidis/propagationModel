@@ -431,6 +431,7 @@ class propagator():
 
 	def keplerian_elements_graph(self):
 
+		self.keepKepElements = np.array([])
 		usableStateVector = np.asarray(self.keepStateVectors)
 		keepKepElements = np.zeros((len(self.keepStateVectors), 6))
 		for i in range(0, len(usableStateVector)):
@@ -438,6 +439,7 @@ class propagator():
 			v = usableStateVector[i, 3:6] / 1000
 			keepKepElements[i, :] = state_kep(r, v)[:]
 
+		self.keepKepElements = keepKepElements
 		keepStatisticKep = np.zeros((6, 4))
 		keepStatisticKep[:, 0] = np.max(keepKepElements, axis=0)
 		keepStatisticKep[:, 1] = np.min(keepKepElements, axis=0)
@@ -453,7 +455,6 @@ class propagator():
 
 		return returnStatisticKepTable, keepKepElements
 
-
 	def download_state_vectors(self):
 
 		datestr = str(datetime.datetime.time(datetime.datetime.now())).replace(":", "")
@@ -462,6 +463,35 @@ class propagator():
 		finalPrintArray = np.zeros((len(self.keepStateVectors), 7))
 		finalPrintArray[:, 0] = self.epochs
 		finalPrintArray[:, 1:] = np.asarray(self.keepStateVectors)[:, :]
+		np.savetxt(filename, finalPrintArray, delimiter=",")
+
+	def download_kep_vectors(self):
+
+		datestr = str(datetime.datetime.time(datetime.datetime.now())).replace(":", "")
+		datestr = datestr.replace(".", "")
+		filename = "kep_" + datestr + ".csv"
+		finalPrintArray = np.zeros((len(self.keepKepElements), 7))
+		finalPrintArray[:, 0] = self.epochs
+		finalPrintArray[:, 1:] = np.asarray(self.keepKepElements)[:, :]
+		np.savetxt(filename, finalPrintArray, delimiter=",")
+
+	def download_accel_vectors(self):
+
+		datestr = str(datetime.datetime.time(datetime.datetime.now())).replace(":", "")
+		datestr = datestr.replace(".", "")
+		filename = "accel_" + datestr + ".csv"
+		finalPrintArray = np.zeros((len(self.epochs)*len(self.tickLabels), 4))
+		for i in range(0, len(self.epochs)):
+
+			finalPrintArray[i * len(self.tickLabels), 0] = self.epochs[i]
+			finalPrintArray[i * len(self.tickLabels) + 1, 0] = self.epochs[i]
+			finalPrintArray[i * len(self.tickLabels) + 2, 0] = self.epochs[i]
+			finalPrintArray[i * len(self.tickLabels) + 3, 0] = self.epochs[i]
+			finalPrintArray[i * len(self.tickLabels) + 4, 0] = self.epochs[i]
+
+
+			# finalPrintArray[:, 1:] = np.asarray(self.keepAccelerations)[:, :]
+		print(finalPrintArray)
 		np.savetxt(filename, finalPrintArray, delimiter=",")
 
 
