@@ -209,8 +209,6 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
 
 			# Keplerian Elements Graph
 			returnStaticKepTable, kepElements = propagatorObj.keplerian_elements_graph()
-			print(len(propagatorObj.epochs))
-			print(len(kepElements))
 
 			trace1 = go.Scatter(
 				x=propagatorObj.epochs,
