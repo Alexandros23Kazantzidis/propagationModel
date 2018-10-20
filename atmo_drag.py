@@ -1,5 +1,6 @@
 import numpy as np
 import math as mp
+import re
 
 
 def find_drag_petrubation(Cd, mSat, dimensions, y):
@@ -102,11 +103,67 @@ def drag(s):
 	return acc
 
 
+def doorbnos_drag(time, date, y, goceFileName, Cd):
+
+	handler = open(goceFileName,"r")
+
+	data = handler.read()
+
+	dateIndex = [m.start() for m in re.finditer(date, data)]
+
+	yearData = data[dateIndex[0]:dateIndex[-1]]
+
+	timeIndex = [m.start() for m in re.finditer(time, yearData)][0]
+	endOfRowIndex = [m.start() for m in re.finditer("\n", yearData[timeIndex:timeIndex+200])][0]
+
+	timeRow = yearData[timeIndex:timeIndex+endOfRowIndex]
+
+	firstSplit = timeRow.split(" ")
+
+	properSplit = []
+	for i in range(0, len(firstSplit)):
+		if firstSplit[i] == "":
+			pass
+		else:
+			properSplit.append(firstSplit[i])
+
+	density = float(properSplit[7])
+
+	dimensions = np.array([2, 2, 2])
+	mSat = 1077
+	we = 7.292115e-5
+	v_atm = we * np.array([-y[1], y[0], 0])
+	satv = y[3:6]
+	vrel = satv - v_atm
+	rForDrag = (mp.sqrt(y[0]**2 + y[1]**2 + y[2]**2) - 6378137) / 1000
+	A = 2 * (dimensions[0] * dimensions[1] + dimensions[0] * dimensions[2] + dimensions[1] * dimensions[2])
+
+	vrel = vrel
+	A = A
+	density = density
+	accelerationDrag = -1/2 * Cd * (A / mSat) * density * vrel ** 2 * (vrel / np.linalg.norm(vrel))
+	accelerationDrag = accelerationDrag * 1000
+
+	print(accelerationDrag)
+
+	return accelerationDrag
+
+
 if __name__ == "__main__":
 
-	y = np.array([4.57158479e+06, -5.42842773e+06, 1.49451936e+04, -2.11034321e+02, -1.61886788e+02, 7.48942330e+03])
-	accelerationDrag = find_drag_petrubation(2.1, 720, np.array([4.6, 2.34, 2.20]), y)
+	# y = np.array([4.57158479e+06, -5.42842773e+06, 1.49451936e+04, -2.11034321e+02, -1.61886788e+02, 7.48942330e+03])
+	y = np.array([+6465819, -1429000, +14827, -206.5, -865.7, +7707.7])
+	# accelerationDrag = find_drag_petrubation(2.1, 720, np.array([4.6, 2.34, 2.20]), y)
+	accelerationDrag = find_drag_petrubation(2.1, 1077, np.array([2, 2, 2]), y)
 	print(accelerationDrag)
 	# y = y / 1000
 	# acc = drag(y)
 	# print(acc)
+
+	y = np.array([+6465819, -1429000, +14827, -206.5, -865.7, +7707.7])
+	date = "2012-11-20"
+	time = "17:40:00.000"
+	goceFileName = "goce_denswind_v1_5_2012-11.txt"
+	Cd = 2.1
+	accDrag = doorbnos_drag(time, date, y, goceFileName, Cd)
+	print(accDrag)

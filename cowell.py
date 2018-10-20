@@ -7,7 +7,7 @@ from tabulate import tabulate
 import math as mp
 from sun_moon import find_sun_moon_acc, position_sun_moon
 from solar_radiation import get_solar_radiation_petrubation
-from atmo_drag import find_drag_petrubation
+from atmo_drag import find_drag_petrubation, doorbnos_drag
 from pylab import rcParams
 from state_kep import state_kep
 from anom_conv import true_to_ecc, ecc_to_mean, mean_to_t
@@ -226,7 +226,7 @@ class propagator():
 			az = (mu / R_ref ** 2) * az
 			return np.array([ax, ay, az])
 
-	def ydot(self, y, C, S, n, m, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, satMass):
+	def ydot(self, y, C, S, n, m, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime):
 		"""Returns the time derivative of a given state.
 			Args:
 				y(1x6 numpy array): the state vector [rx,ry,rz,vx,vy,vz]
@@ -260,7 +260,11 @@ class propagator():
 			accelerationRadiation = get_solar_radiation_petrubation(positionSun, y[0:3], solarEpsilon, satMass, np.array([4.6, 2.34, 2.20]))
 
 		if drag is True:
-			accelerationDrag = find_drag_petrubation(dragCoeff, satMass, np.array([4.6, 2.34, 2.20]), y)
+			if draModel == 1:
+				accelerationDrag = find_drag_petrubation(dragCoeff, satMass, np.array([4.6, 2.34, 2.20]), y)
+			elif draModel == 2:
+				goceFileName = "goce_denswind_v1_5_2012-11.txt"
+				accelerationDrag = doorbnos_drag(goceTime, goceDate, y, goceFileName, dragCoeff)
 
 		a = a + accelerationSun + accelerationMoon + accelerationRadiation + accelerationDrag
 
@@ -271,7 +275,7 @@ class propagator():
 
 		return np.array([*y[3:6], *a])
 
-	def rk4(self, y, t0, tf, h, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, C, S, satMass):
+	def rk4(self, y, t0, tf, h, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, C, S, satMass, goceDate, goceTime):
 		"""Runge-Kutta 4th Order Numerical Integrator
 			Args:
 				y(1x6 numpy array): the state vector [rx,ry,rz,vx,vy,vz]
@@ -294,18 +298,13 @@ class propagator():
 			if (abs(tf-t) < abs(h)):
 				h = tf-t
 
-			# k1 = h*ydot(y)
-			# k2 = h*ydot(y+k1/2)
-			# k3 = h*ydot(y+k2/2)
-			# k4 = h*ydot(y+k3)
-
-			k1 = h * self.ydot(y, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, satMass)
+			k1 = h * self.ydot(y, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime)
 
 			self.keepAccelerations.append(np.copy(self.accelerations))
 
-			k2 = h * self.ydot(y + k1 / 2, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, satMass)
-			k3 = h * self.ydot(y + k2 / 2, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, satMass)
-			k4 = h * self.ydot(y + k3, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, satMass)
+			k2 = h * self.ydot(y + k1 / 2, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime)
+			k3 = h * self.ydot(y + k2 / 2, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime)
+			k4 = h * self.ydot(y + k3, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime)
 
 			self.keepStateVectors.append(y)
 

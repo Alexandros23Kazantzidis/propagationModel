@@ -15,28 +15,47 @@ window.onload = function () {
         } else if ($('span[role="option"]')[0].textContent === "Geodynamic Model") {
             $("#geodynamic-parameters").css("display", "block");
         };
+        if (($('span[role="option"]')[2].textContent === "Harris-Priester")) {
+            $("#goce").css("display", "none");
+        } else if (($('span[role="option"]')[2].textContent === "Doorbnos Thermospheric Density Model (Only for GOCE)")) {
+            $("#goce").css("display", "block");
+        }
     });
 
     jQuery('#other-forces').find('input').attr("class","other-forces-inputs");
-    $('.other-forces-inputs')[0].className = "sun-moon-input"
-    $('.other-forces-inputs')[0].className = "radiation-input"
-    $('.other-forces-inputs')[0].className = "drag-input"
+    $('.other-forces-inputs')[0].className = "sun-moon-input";
+    $('.other-forces-inputs')[0].className = "radiation-input";
+    $('.other-forces-inputs')[0].className = "drag-input";
 
     $('.radiation-input').change(function () {
         if ($(this).is(":checked")) {
-            $('#radiation-parameters').css('display', 'block')
+            $('#radiation-parameters').css('display', 'block');
         } else {
-            $('#radiation-parameters').css('display', 'none')
+            $('#radiation-parameters').css('display', 'none');
         }
     });
 
     $('.drag-input').change(function () {
         if ($(this).is(":checked")) {
-            $('#drag-parameters').css('display', 'block')
+            $('#drag-parameters').css('display', 'block');
+            $('#drag-model').css('display', 'block');
         } else {
-            $('#drag-parameters').css('display', 'none')
+            $('#drag-parameters').css('display', 'none');
+             $('#drag-model').css('display', 'none');
         }
     });
+
+    console.log($('#drag-model'));
+//    $('.drag-input').change(function () {
+//        if ($(this).is(":checked")) {
+//            $('#drag-parameters').css('display', 'block');
+//            $('#drag-model').css('display', 'block');
+//        } else {
+//            $('#drag-parameters').css('display', 'none');
+//             $('#drag-model').css('display', 'none');
+//        }
+//    });
+
 
     jQuery(".Select-clear").hide();
 };
