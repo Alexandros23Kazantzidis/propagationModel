@@ -485,6 +485,16 @@ class propagator():
 		finalPrintArray[:, 1:] = np.asarray(self.keepStateVectors)[:, :]
 		np.savetxt(filename, finalPrintArray, delimiter=",")
 
+		returnStateTable = pd.DataFrame(
+			data=finalPrintArray[:, 1:],
+			index=finalPrintArray[:, 0],
+			columns=["rx(m)", "ry(m)", "rz(m)", "vx(m/s)", "vy(m/s)", "vz(m/s)"]
+		)
+
+		returnStateTable.index.name = "Time(sec)"
+
+		returnStateTable.to_csv(filename, sep=",")
+
 	def download_kep_vectors(self):
 
 		datestr = str(datetime.datetime.time(datetime.datetime.now())).replace(":", "")
@@ -493,7 +503,17 @@ class propagator():
 		finalPrintArray = np.zeros((len(self.keepKepElements), 7))
 		finalPrintArray[:, 0] = self.epochs
 		finalPrintArray[:, 1:] = np.asarray(self.keepKepElements)[:, :]
-		np.savetxt(filename, finalPrintArray, delimiter=",")
+		# np.savetxt(filename, finalPrintArray, delimiter=",")
+
+		returnKepTable = pd.DataFrame(
+			data=finalPrintArray[:, 1:],
+			index=finalPrintArray[:, 0],
+			columns=["a(m)", "e(float)", "i(degrees)", "ω(degrees)", "Ω(degrees)", "v(degrees)"]
+		)
+
+		returnKepTable.index.name = "Time(sec)"
+
+		returnKepTable.to_csv(filename, sep=",")
 
 	def download_accel_vectors(self):
 
@@ -501,18 +521,28 @@ class propagator():
 		datestr = datestr.replace(".", "")
 		filename = "accel_" + datestr + ".csv"
 		finalPrintArray = np.zeros((len(self.epochs)*len(self.tickLabels), 4))
+		# print(len(finalPrintArray))
 		for i in range(0, len(self.epochs)):
+			for j in range(0, len(self.tickLabels)):
+				finalPrintArray[i * len(self.tickLabels) + j, 0] = self.epochs[i]
+				finalPrintArray[i * len(self.tickLabels) + j, 1:4] = np.asarray(self.keepAccelerations)[i][j, :]
 
-			finalPrintArray[i * len(self.tickLabels), 0] = self.epochs[i]
-			finalPrintArray[i * len(self.tickLabels) + 1, 0] = self.epochs[i]
-			finalPrintArray[i * len(self.tickLabels) + 2, 0] = self.epochs[i]
-			finalPrintArray[i * len(self.tickLabels) + 3, 0] = self.epochs[i]
-			finalPrintArray[i * len(self.tickLabels) + 4, 0] = self.epochs[i]
+		finalTickLabels = np.zeros((len(self.epochs) * len(self.tickLabels), 1), dtype=object)
+		for i in range(0, len(self.epochs)):
+			for j in range(0, len(self.tickLabels)):
+				finalTickLabels[i * len(self.tickLabels) + j, 0] = self.tickLabels[j]
 
+		returnAcceTable = pd.DataFrame(
+			data=finalPrintArray[:, 1:],
+			index=finalPrintArray[:, 0],
+			columns=["ax(m**2/s)", "ay(m**2/s)", "az(m**2/s)"]
+		)
 
-			# finalPrintArray[:, 1:] = np.asarray(self.keepAccelerations)[:, :]
-		# print(finalPrintArray)
-		np.savetxt(filename, finalPrintArray, delimiter=",")
+		returnAcceTable.index.name = "Time(sec)"
+		returnAcceTable.insert(0, "Source", finalTickLabels[:])
+
+		returnAcceTable.to_csv(filename, sep=",")
+
 
 
 if __name__ == "__main__":
@@ -531,15 +561,19 @@ if __name__ == "__main__":
 	# ydot(y)
 
 	for i in range(0, 1):
+
 		final[i, :] = propagatorObj.rk4(y, t0, tf, 2, 2, True, 0.5, True, True, 2.1, 1, C, S, 720, "2012-11-20", "17:40:00")
+
 		t0 = tf
 		tf = tf + 100
 		y = final[i, :]
 		# print(i, mp.sqrt(y[0]**2+y[1]**2+y[2]**2) - 6378137)
 
-	# propagatorObj.accelerations_graph(True,True,True)
+	propagatorObj.accelerations_graph(True, True, True)
 	# state_vectors = np.asarray(propagatorObj.keepStateVectors)
+
 	# propagatorObj.download_state_vectors()
+
 	# propagatorObj.keplerian_elements_graph()
 
 	# final = propagatorObj.rk4(y, t0, tf, 5, 2, True, True, True, C, S)
