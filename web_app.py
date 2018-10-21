@@ -116,7 +116,7 @@ app.layout = html.Div([
 					html.Label('Date (yyyy-mm-dd)', className="main"),
 					dcc.Input(value='2012-11-20', type='text', id='goce-date', style={"margin-bottom": "5px", "text-align": "center"}),
 					html.Label('Time (hh:mm-ss)', className="main"),
-					dcc.Input(value='17:40:00.000', type='text', id='goce-time', style={"margin-bottom": "5px", "text-align": "center"}),
+					dcc.Input(value='17:40:00', type='text', id='goce-time', style={"margin-bottom": "5px", "text-align": "center"}),
 				]),
 			])
 

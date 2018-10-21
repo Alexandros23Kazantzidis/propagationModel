@@ -105,9 +105,9 @@ def drag(s):
 
 def doorbnos_drag(time, date, y, goceFileName, Cd):
 
-	handler = open(goceFileName,"r")
-
+	handler = open(goceFileName, "r")
 	data = handler.read()
+	handler.close()
 
 	dateIndex = [m.start() for m in re.finditer(date, data)]
 
@@ -144,7 +144,7 @@ def doorbnos_drag(time, date, y, goceFileName, Cd):
 	accelerationDrag = -1/2 * Cd * (A / mSat) * density * vrel ** 2 * (vrel / np.linalg.norm(vrel))
 	accelerationDrag = accelerationDrag * 1000
 
-	print(accelerationDrag)
+	# print(accelerationDrag)
 
 	return accelerationDrag
 

@@ -290,6 +290,7 @@ class propagator():
 		self.keepAccelerations = []
 		self.keepStateVectors = []
 		self.epochs = []
+		keepGoceTime = goceTime
 
 		if tf < t0:
 			h = -h
@@ -297,6 +298,15 @@ class propagator():
 		while(abs(tf-t) > 0.00001):
 			if (abs(tf-t) < abs(h)):
 				h = tf-t
+
+			try:
+				goceTimeObj = datetime.datetime.strptime(goceDate + " " + keepGoceTime, '%Y-%m-%d %H:%M:%S')
+			except:
+				goceTimeObj = datetime.datetime.strptime(goceDate + " " + keepGoceTime, '%Y-%m-%d %H:%M:%S.%f')
+			stepTimeObj = datetime.timedelta(seconds=h)
+			goceTime = str(goceTimeObj + stepTimeObj).split(" ")[1]
+			keepGoceTime = goceTime
+			goceTime = goceTime[:-1] + "0.000"
 
 			k1 = h * self.ydot(y, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime)
 
@@ -318,9 +328,6 @@ class propagator():
 
 	def accelerations_graph(self, solar, sunAndMoon, drag,):
 
-		# rcParams['figure.figsize'] = 12, 8
-		# fig, ax = plt.subplots()
-
 		self.keepAbsoluteAccelerations = []
 		wantedAcceleration = []
 		keepMean = []
@@ -330,6 +337,7 @@ class propagator():
 
 			checkWith = np.mean(wantedAcceleration)
 			self.keepAbsoluteAccelerations.append([np.max(wantedAcceleration), np.min(wantedAcceleration), checkWith, np.std(wantedAcceleration)])
+
 			if checkWith > 1:
 				if checkWith / 10 > 1:
 					if checkWith / 100 > 1:
@@ -366,23 +374,36 @@ class propagator():
 			wantedAcceleration = []
 
 		self.accelerationsGraph = keepMean
+		print(self.accelerationsGraph)
 
 		self.tickLabels = []
+		rowsToKeep = [0]
 		self.tickLabels.append("Earth")
 		if sunAndMoon == True:
 			self.tickLabels.append("Sun")
 			self.tickLabels.append("Moon")
+			rowsToKeep.append(1)
+			rowsToKeep.append(2)
 
 		if solar == True:
 			self.tickLabels.append("Radiation")
+			rowsToKeep.append(3)
 
 		if drag == True:
 			self.tickLabels.append("Drag")
+			rowsToKeep.append(4)
 
-		# ax.bar(np.arange(len(keepMean)), keepMean, align='center')
-		# ax.set_xticks(np.arange(len(keepMean)))
-		# ax.set_xticklabels(("Earth", "Sun", "Moon", "Solar Radiation", "Atmospheric Drag"))
-		# plt.show()
+		finalKeepAbsoluteAccelerations = np.zeros((len(self.tickLabels), 4))
+		for i in range(0, len(rowsToKeep)):
+			finalKeepAbsoluteAccelerations[i, :] = self.keepAbsoluteAccelerations[int(rowsToKeep[i])]
+
+		self.keepAbsoluteAccelerations = np.copy(finalKeepAbsoluteAccelerations)
+
+		finalAccelerationsGraph = np.zeros(len(self.tickLabels))
+		for i in range(0, len(rowsToKeep)):
+			finalAccelerationsGraph[i] = self.accelerationsGraph[int(rowsToKeep[i])]
+
+		self.accelerationsGraph = np.copy(finalAccelerationsGraph)
 
 	def earth_track_map(self, time0):
 		"""
@@ -391,7 +412,7 @@ class propagator():
 
 		unpackStateVectors = np.asarray(self.keepStateVectors)
 
-		print(unpackStateVectors)
+		# print(unpackStateVectors)
 		y = np.mean(unpackStateVectors, 0)
 		y = y / 1000
 		kep = state_kep(y[0:3], y[3:6])
@@ -490,7 +511,7 @@ class propagator():
 
 
 			# finalPrintArray[:, 1:] = np.asarray(self.keepAccelerations)[:, :]
-		print(finalPrintArray)
+		# print(finalPrintArray)
 		np.savetxt(filename, finalPrintArray, delimiter=",")
 
 
@@ -510,7 +531,7 @@ if __name__ == "__main__":
 	# ydot(y)
 
 	for i in range(0, 1):
-		final[i, :] = propagatorObj.rk4(y, t0, tf, 2, 2, True, 0.5, True, True, 2.1, C, S, 720)
+		final[i, :] = propagatorObj.rk4(y, t0, tf, 2, 2, True, 0.5, True, True, 2.1, 1, C, S, 720, "2012-11-20", "17:40:00")
 		t0 = tf
 		tf = tf + 100
 		y = final[i, :]
@@ -518,14 +539,13 @@ if __name__ == "__main__":
 
 	# propagatorObj.accelerations_graph(True,True,True)
 	# state_vectors = np.asarray(propagatorObj.keepStateVectors)
-	propagatorObj.download_state_vectors()
+	# propagatorObj.download_state_vectors()
 	# propagatorObj.keplerian_elements_graph()
 
 	# final = propagatorObj.rk4(y, t0, tf, 5, 2, True, True, True, C, S)
 
-
 	# propagatorObj.earth_track_map(1521562500)
-	# print(propagatorObj.keepStateVectors)
+	print(propagatorObj.keepStateVectors)
 
 	# altitude = []
 	# for i in range(0, len(propagatorObj.keepStateVectors)):
