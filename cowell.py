@@ -23,6 +23,8 @@ class propagator():
 		self.keepAccelerations = []
 		self.keepStateVectors = []
 		self.epochs = []
+		self.C = np.zeros(1)
+		self.S = np.zeros(1)
 
 	def restruct_geopotential_file(self, gravityModelFileName):
 		"""Creates a new restructured file holding the geopotential coefficients Cnm,Snm of a gravity model
@@ -40,7 +42,7 @@ class propagator():
 		handler.close()
 		writeHandler.close()
 
-	def read_geopotential_coeffs(self, restructGravityFileName,firstRead):
+	def read_geopotential_coeffs(self, restructGravityFileName, firstRead):
 		"""Returns an array holding the geopotential coefficients Cnm,Snm of a gravity model
 			Args:
 				gravityModelFileName (string): the name of the file holding the coeffs
@@ -54,10 +56,10 @@ class propagator():
 			data = np.genfromtxt(restructGravityFileName, delimiter=",")
 			data = data[1:, 1:]
 
-			pickle.dump(data, open("data.p", "wb"))
+			pickle.dump(data, open("data " + restructGravityFileName + ".p", "wb"))
 		elif firstRead is False:
 
-			data = pickle.load(open("data.p", "rb"))
+			data = pickle.load(open("data " + restructGravityFileName + ".p", "rb"))
 
 		return data
 
@@ -105,10 +107,12 @@ class propagator():
 				S[int(nIndex), int(mIndex)] = gravityCoeff[i, 3]
 
 		C[0, 0] = 1
-		return C, S
+		self.C = np.copy(C)
+		self.S = np.copy(S)
 
 	def ydot_geopotential(self, y, C, S, n, m):
 		"""Returns the time derivative of only the geopotential effect for a given state.
+		!!! Deprecated Method!!!
 			Args:
 				y(1x6 numpy array): the state vector [rx,ry,rz,vx,vy,vz]
 				gravityCoeff (nxm numpy array): the array where you have stored the geopotential coefficients Cnm,Snm
@@ -326,7 +330,7 @@ class propagator():
 
 		return y
 
-	def accelerations_graph(self, solar, sunAndMoon, drag,):
+	def accelerations_graph(self, solar, sunAndMoon, drag):
 
 		self.keepAbsoluteAccelerations = []
 		wantedAcceleration = []
@@ -544,7 +548,6 @@ class propagator():
 		returnAcceTable.to_csv(filename, sep=",")
 
 
-
 if __name__ == "__main__":
 	y = np.array([4.57158479e+06, -5.42842773e+06, 1.49451936e+04, -2.11034321e+02, -1.61886788e+02, 7.48942330e+03])
 
@@ -552,17 +555,17 @@ if __name__ == "__main__":
 	final = np.zeros((200, 6))
 
 	propagatorObj = propagator()
-	# restruct_geopotential_file("EGM2008.gfc")
-	data = propagatorObj.read_geopotential_coeffs("restruct_EGM2008.gfc", False)
+	# propagatorObj.restruct_geopotential_file("RWI_TOPO_2012_plusGRS80.gfc")
+	data = propagatorObj.read_geopotential_coeffs("restruct_RWI_TOPO_2012_plusGRS80.gfc", False)
 	#
-	C, S = propagatorObj.createNumpyArrayForCoeffs(data, 10, 10)
-
+	propagatorObj.createNumpyArrayForCoeffs(data, 10, 10)
+	#
 	# ydot_geopotential(y, C, S, 10, 10)
 	# ydot(y)
 
 	for i in range(0, 1):
 
-		final[i, :] = propagatorObj.rk4(y, t0, tf, 2, 2, True, 0.5, True, True, 2.1, 1, C, S, 720, "2012-11-20", "17:40:00")
+		final[i, :] = propagatorObj.rk4(y, t0, tf, 50, 2, True, 0.5, True, True, 2.1, 1, propagatorObj.C, propagatorObj.S, 720, "2012-11-20", "17:40:00")
 
 		t0 = tf
 		tf = tf + 100
@@ -579,7 +582,7 @@ if __name__ == "__main__":
 	# final = propagatorObj.rk4(y, t0, tf, 5, 2, True, True, True, C, S)
 
 	# propagatorObj.earth_track_map(1521562500)
-	print(propagatorObj.keepStateVectors)
+	print(propagatorObj.keepAccelerations)
 
 	# altitude = []
 	# for i in range(0, len(propagatorObj.keepStateVectors)):

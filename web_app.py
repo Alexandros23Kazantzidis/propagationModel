@@ -66,7 +66,8 @@ app.layout = html.Div([
 					id="geo-model-chose",
 					options=[
 						{'label': 'EGM08', 'value': 1},
-						{'label': 'EIGEN', 'value': 2},
+						{'label': 'GOCO03s', 'value': 2},
+						{'label': 'RWI TOPO 2012', 'value': 3},
 					],
 					value=1
 				),
@@ -172,12 +173,12 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
 			kepOrGeo = int(input5)
 			other = list(input6)
 
-			if kepOrGeo == 2:
-				data = propagatorObj.read_geopotential_coeffs("restruct_EGM2008.gfc", False)
-				C, S = propagatorObj.createNumpyArrayForCoeffs(data, 10, 10)
-			else:
-				C = 0
-				S = 0
+			# if kepOrGeo == 2:
+			# 	data = propagatorObj.read_geopotential_coeffs("restruct_EGM2008.gfc", False)
+			# 	C, S = propagatorObj.createNumpyArrayForCoeffs(data, 10, 10)
+			# else:
+			# 	C = 0
+			# 	S = 0
 
 			sunAndMoon = False
 			solar = False
@@ -195,7 +196,7 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
 			loopTf = step
 			loopIndex = int((tf - t0) / step)
 
-			y = propagatorObj.rk4(y, t0, tf, step, kepOrGeo, solar, float(input7), sunAndMoon, drag, float(input8), input12, C, S, float(input9), input10, input11)
+			y = propagatorObj.rk4(y, t0, tf, step, kepOrGeo, solar, float(input7), sunAndMoon, drag, float(input8), input12, propagatorObj.C, propagatorObj.S, float(input9), input10, input11)
 
 			altitude = np.sqrt(np.asarray(propagatorObj.keepStateVectors)[:, 0]**2 + np.asarray(propagatorObj.keepStateVectors)[:, 1]**2 + np.asarray(propagatorObj.keepStateVectors)[:, 2]**2)
 			beforeDataFrame = np.zeros((loopIndex, 7))
@@ -360,9 +361,13 @@ def choose_geo_model(n_clicks, input1, input2, input3):
 		input3 = int(input3)
 		if input1 == 1:
 			data = propagatorObj.read_geopotential_coeffs("restruct_EGM2008.gfc", False)
-			C, S = propagatorObj.createNumpyArrayForCoeffs(data, input2, input3)
-		else:
-			pass
+			propagatorObj.createNumpyArrayForCoeffs(data, input2, input3)
+		elif input1 == 2:
+			data = propagatorObj.read_geopotential_coeffs("restruct_GOCO03s.gfc", False)
+			propagatorObj.createNumpyArrayForCoeffs(data, input2, input3)
+		elif input1 == 3:
+			data = propagatorObj.read_geopotential_coeffs("restruct_RWI_TOPO_2012_plusGRS80.gfc", False)
+			propagatorObj.createNumpyArrayForCoeffs(data, input2, input3)
 
 		n_clicks = 0
 
