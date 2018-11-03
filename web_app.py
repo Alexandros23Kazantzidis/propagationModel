@@ -126,6 +126,7 @@ app.layout = html.Div([
 
 	html.Div(children=[
 
+		html.Label('Please first import the Geodynamic Model before clicking Determine Satellite Orbit', id="import-error", className="info-error", style={"display": "none"}),
 		html.Button(children="Determine Satellite Orbit", id="calculate-orbit", n_clicks=0)
 
 	], style={'margin': '40px'}),

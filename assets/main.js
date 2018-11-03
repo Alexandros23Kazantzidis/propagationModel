@@ -14,6 +14,8 @@ window.onload = function () {
             $("#geodynamic-parameters").css("display", "none");
         } else if ($('span[role="option"]')[0].textContent === "Geodynamic Model") {
             $("#geodynamic-parameters").css("display", "block");
+            $("#calculate-orbit").addClass("disabled");
+            $("#import-error").css("display","block");
         };
         if (($('span[role="option"]')[2].textContent === "Harris-Priester")) {
             $("#goce").css("display", "none");
@@ -45,7 +47,11 @@ window.onload = function () {
         }
     });
 
-    console.log($('#drag-model'));
+    $('#calculate-geo-button').click(function() {
+        $("#calculate-orbit").removeClass("disabled");
+        $("#import-error").css("display","none");
+    });
+
 //    $('.drag-input').change(function () {
 //        if ($(this).is(":checked")) {
 //            $('#drag-parameters').css('display', 'block');
