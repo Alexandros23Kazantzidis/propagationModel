@@ -63,6 +63,10 @@ label.second {
     display:none;
 }
 
+#accel-sizes-hide1 {
+    display:none;
+}
+
 /* Info Info messages */
 .info-message {
     -webkit-animation: fadeOut 2s forwards;

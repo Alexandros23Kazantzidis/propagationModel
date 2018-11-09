@@ -314,6 +314,7 @@ class propagator():
 
 			k1 = h * self.ydot(y, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime)
 
+
 			self.keepAccelerations.append(np.copy(self.accelerations))
 
 			k2 = h * self.ydot(y + k1 / 2, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime)
@@ -333,11 +334,26 @@ class propagator():
 	def accelerations_graph(self, solar, sunAndMoon, drag):
 
 		self.keepAbsoluteAccelerations = []
+		self.keepWantedAcceleration = []
+		self.keepWantedTickLabels = []
 		wantedAcceleration = []
 		keepMean = []
 		for j in range(0, 5):
 			for i in range(0, len(self.keepAccelerations)):
 				wantedAcceleration.append(mp.sqrt(self.keepAccelerations[i][j, 0]**2 + self.keepAccelerations[i][j, 1]**2 + self.keepAccelerations[i][j, 2]**2))
+
+			if wantedAcceleration[0] != 0:
+				self.keepWantedAcceleration.append(wantedAcceleration)
+				if j == 0:
+					self.keepWantedTickLabels.append("Earth")
+				elif j == 1:
+					self.keepWantedTickLabels.append("Sun")
+				elif j == 2:
+					self.keepWantedTickLabels.append("Moon")
+				elif j == 3:
+					self.keepWantedTickLabels.append("Solar")
+				elif j == 4:
+					self.keepWantedTickLabels.append("Atmospheric")
 
 			checkWith = np.mean(wantedAcceleration)
 			self.keepAbsoluteAccelerations.append([np.max(wantedAcceleration), np.min(wantedAcceleration), checkWith, np.std(wantedAcceleration)])
@@ -378,7 +394,6 @@ class propagator():
 			wantedAcceleration = []
 
 		self.accelerationsGraph = keepMean
-		print(self.accelerationsGraph)
 
 		self.tickLabels = []
 		rowsToKeep = [0]
@@ -394,7 +409,7 @@ class propagator():
 			rowsToKeep.append(3)
 
 		if drag == True:
-			self.tickLabels.append("Drag")
+			self.tickLabels.append("Atmospheric")
 			rowsToKeep.append(4)
 
 		finalKeepAbsoluteAccelerations = np.zeros((len(self.tickLabels), 4))
@@ -524,17 +539,18 @@ class propagator():
 		datestr = str(datetime.datetime.time(datetime.datetime.now())).replace(":", "")
 		datestr = datestr.replace(".", "")
 		filename = "accel_" + datestr + ".csv"
-		finalPrintArray = np.zeros((len(self.epochs)*len(self.tickLabels), 4))
-		# print(len(finalPrintArray))
-		for i in range(0, len(self.epochs)):
-			for j in range(0, len(self.tickLabels)):
-				finalPrintArray[i * len(self.tickLabels) + j, 0] = self.epochs[i]
-				finalPrintArray[i * len(self.tickLabels) + j, 1:4] = np.asarray(self.keepAccelerations)[i][j, :]
+		finalPrintArray = np.zeros((len(self.epochs)*5, 4))
 
-		finalTickLabels = np.zeros((len(self.epochs) * len(self.tickLabels), 1), dtype=object)
 		for i in range(0, len(self.epochs)):
-			for j in range(0, len(self.tickLabels)):
-				finalTickLabels[i * len(self.tickLabels) + j, 0] = self.tickLabels[j]
+			for j in range(0, 5):
+				finalPrintArray[i * 5 + j, 0] = self.epochs[i]
+				finalPrintArray[i * 5 + j, 1:4] = np.asarray(self.keepAccelerations)[i][j, :]
+
+		tempoTickLabels = ["Earth", "Sun", "Moon", "Radiation", "Atmospheric"]
+		finalTickLabels = np.zeros((len(self.epochs) * 5, 1), dtype=object)
+		for i in range(0, len(self.epochs)):
+			for j in range(0, 5):
+				finalTickLabels[i * 5 + j, 0] = tempoTickLabels[j]
 
 		returnAcceTable = pd.DataFrame(
 			data=finalPrintArray[:, 1:],
@@ -565,25 +581,18 @@ if __name__ == "__main__":
 
 	for i in range(0, 1):
 
-		final[i, :] = propagatorObj.rk4(y, t0, tf, 50, 2, True, 0.5, True, True, 2.1, 1, propagatorObj.C, propagatorObj.S, 720, "2012-11-20", "17:40:00")
+		final[i, :] = propagatorObj.rk4(y, t0, tf, 50, 2, False, 0.5, True, True, 2.1, 1, propagatorObj.C, propagatorObj.S, 720, "2012-11-20", "17:40:00")
 
 		t0 = tf
 		tf = tf + 100
 		y = final[i, :]
 		# print(i, mp.sqrt(y[0]**2+y[1]**2+y[2]**2) - 6378137)
 
-	propagatorObj.accelerations_graph(True, True, True)
+	propagatorObj.accelerations_graph(False, True, True)
 	# state_vectors = np.asarray(propagatorObj.keepStateVectors)
 
-	# propagatorObj.download_state_vectors()
-
-	# propagatorObj.keplerian_elements_graph()
-
-	# final = propagatorObj.rk4(y, t0, tf, 5, 2, True, True, True, C, S)
-
-	# propagatorObj.earth_track_map(1521562500)
-	print(propagatorObj.keepAccelerations)
-
+	print(propagatorObj.keepWantedAcceleration)
+	print(propagatorObj.tickLabels)
 	# altitude = []
 	# for i in range(0, len(propagatorObj.keepStateVectors)):
 	# 	altitude.append(np.sqrt(propagatorObj.keepStateVectors[i][0] ** 2 + propagatorObj.keepStateVectors[i][

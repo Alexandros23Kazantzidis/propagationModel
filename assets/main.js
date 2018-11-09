@@ -9,14 +9,21 @@ console.log(body);
 
 window.onload = function () {
 
-    $('span[role="option"]').on('DOMSubtreeModified',function(){
+    console.log("break me");
+
+    $('span#react-select-2--value-item').on('DOMSubtreeModified',function(){
         if ($('span[role="option"]')[0].textContent === "Keplerian") {
             $("#geodynamic-parameters").css("display", "none");
+            $("#calculate-orbit").removeClass("disabled");
+            $("#import-error").css("display","none");
         } else if ($('span[role="option"]')[0].textContent === "Geodynamic Model") {
             $("#geodynamic-parameters").css("display", "block");
             $("#calculate-orbit").addClass("disabled");
             $("#import-error").css("display","block");
         };
+    });
+
+    $('span#react-select-4--value-item').on('DOMSubtreeModified',function(){
         if (($('span[role="option"]')[2].textContent === "Harris-Priester")) {
             $("#goce").css("display", "none");
         } else if (($('span[role="option"]')[2].textContent === "Doorbnos Thermospheric Density Model (Only for GOCE)")) {
