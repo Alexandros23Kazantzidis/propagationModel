@@ -32,19 +32,20 @@ app.layout = html.Div([
         html.Div(children=[
             html.H3('Initial Parameters'),
             html.Label('State Vector (m - m/s)', className="main"),
-            dcc.Textarea(value='+6465819, -1429000, +14827, -206.5, -865.7, +7707.7', id='state-vector', style={"margin-bottom": "5px", "min-height": "150px"}),
+            # dcc.Textarea(value='+6465819, -1429000, +14827, -206.5, -865.7, +7707.7', id='state-vector', style={"margin-bottom": "5px", "min-height": "150px"}),
+            dcc.Textarea(value='4.57158479e+06, -5.42842773e+06, 1.49451936e+04, -2.11034321e+02, -1.61886788e+02, 7.48942330e+03', id='state-vector', style={"margin-bottom": "5px", "min-height": "150px"}),
 
             html.Label('Initial Time (sec)', className="main"),
             dcc.Input(value='0', type='text', id='init-time', style={"margin-bottom": "5px"}),
 
             html.Label('Final Time (sec)', className="main"),
-            dcc.Input(value='500', type='text', id='final-time', style={"margin-bottom": "5px"}),
+            dcc.Input(value='26400', type='text', id='final-time', style={"margin-bottom": "5px"}),
 
             html.Label('Step Size (sec)', className="main"),
             dcc.Input(value='100', type='text', id='step-size', style={"margin-bottom": "5px"}),
 
             html.Label('Satellite Mass (kg)', className="main"),
-            dcc.Input(value='1077', type='text', id='sat-mass', style={"margin-bottom": "5px"}),
+            dcc.Input(value='720', type='text', id='sat-mass', style={"margin-bottom": "5px"}),
         ], style={'margin': '20px', }),
 
         html.Div(children=[
@@ -289,7 +290,7 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
             )
 
             figlog = go.Figure(layout=layoutlog)
-            figlog['layout'].update(title='Logarithmic Accelerations Graph')
+            figlog['layout'].update(title='Logarithmic Accelerations Graph (m^2/sec)')
             figlog.add_traces(allTraceLogs)
 
             return html.Div(children=
