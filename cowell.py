@@ -487,7 +487,7 @@ class propagator():
 
 		returnStatisticKepTable = pd.DataFrame(
 			data=keepStatisticKep,
-			index=["Semi Majox Axis", "Eccentricity", "Inclination", "Argument of Perigee", "Longitude of the ascending node", "True anomaly"],
+			index=["Semi Majox Axis(km)", "Eccentricity(float)", "Inclination(degrees)", "Argument of Perigee(degrees)", "Longitude of the ascending node(degrees)", "True anomaly(degrees)"],
 			columns=["Max", "Min", "Average", "STD"]
 		)
 		returnStatisticKepTable.insert(0, "Keplerian Element", returnStatisticKepTable.index)

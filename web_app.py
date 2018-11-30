@@ -213,7 +213,7 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
             returnAcceTable = pd.DataFrame(
                 data=beforeAccelTable,
                 index=propagatorObj.tickLabels,
-                columns=["Max", "Min", "Average", "STD"]
+                columns=["Max(m^2/s)", "Min(m^2/s)", "Average(m^2/s)", "STD(m^2/s)"]
             )
 
             returnAcceTable.insert(0, "Source", returnAcceTable.index)
@@ -261,7 +261,7 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
             fig = tools.make_subplots(rows=3, cols=2, specs=[[{}, {}], [{}, {}], [{}, {}]],
                                       subplot_titles=('Semi Major Axis(km)', 'Eccentricity(float)',
                                                     'Inclination(Degrees)', 'Argument of Perigee(degrees)',
-                                                    "Longitude of the ascending node", "True anomaly"),
+                                                    "Longitude of the ascending node(degrees)", "True anomaly(degrees)"),
                                       shared_xaxes=True, vertical_spacing=0.1)
             fig.append_trace(trace1, 1, 1)
             fig.append_trace(trace2, 1, 2)
@@ -312,10 +312,10 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
                             'data': [
                                 go.Scatter(
                                     x=propagatorObj.epochs,
-                                    y=altitude,
+                                    y=altitude/1000,
                                     opacity=0.7,
                                 )
-                            ], 'layout': {'title': 'Altitude (m)', 'exponentformat': "'e'"}
+                            ], 'layout': {'title': 'Altitude (km)', 'exponentformat': "'e'"}
                         }
                     ), \
                     \
