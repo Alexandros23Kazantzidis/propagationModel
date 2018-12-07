@@ -33,9 +33,11 @@ app.layout = html.Div([
         html.Div(children=[
             html.H3('Initial Parameters'),
             html.Label('State Vector (m - m/s)', className="main"),
-            dcc.Textarea(value='+6465819, -1429000, +14827, -206.5, -865.7, +7707.7', id='state-vector', style={"margin-bottom": "5px", "min-height": "150px"}),
+            # dcc.Textarea(value='+6465819, -1429000, +14827, -206.5, -865.7, +7707.7', id='state-vector', style={"margin-bottom": "5px", "min-height": "150px"}),
+            dcc.Textarea(value='-4944559.17407762,5091026.32253509,14967.5683986330,568.983806254046,535.694647212606,7489.45082782167', id='state-vector', style={"margin-bottom": "5px", "min-height": "150px"}),
             #  dcc.Textarea(value='4.57158479e+06, -5.42842773e+06, 1.49451936e+04, -2.11034321e+02, -1.61886788e+02, 7.48942330e+03', id='state-vector', style={"margin-bottom": "5px", "min-height": "150px"}),
             # dcc.Textarea(value='-8.39487077e+06,1.78485549e+07,1.72470011e+07,-2.02935356e+03,-2.79438155e+03,1.86857675e+03', id='state-vector', style={"margin-bottom": "5px", "min-height": "150px"}),
+            # dcc.Textarea(value='9637467.29653857,-17209655.4442556,17246761.9513018,575.201863523118,2230.36513274403,1868.64989675138', id='state-vector', style={"margin-bottom": "5px", "min-height": "150px"}),
 
             html.Label('Initial Time (sec)', className="main"),
             dcc.Input(value='0', type='text', id='init-time', style={"margin-bottom": "5px"}),

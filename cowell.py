@@ -534,7 +534,7 @@ class propagator():
 		returnKepTable = pd.DataFrame(
 			data=finalPrintArray[:, 1:],
 			index=finalPrintArray[:, 0],
-			columns=["a(m)", "e(float)", "i(degrees)", "ω(degrees)", "Ω(degrees)", "v(degrees)"]
+			columns=["a(km)", "e(float)", "i(degrees)", "ω(degrees)", "Ω(degrees)", "v(degrees)"]
 		)
 
 		returnKepTable.index.name = "Time(sec)"
@@ -572,42 +572,45 @@ class propagator():
 
 
 if __name__ == "__main__":
+
 	y = np.array([4.57158479e+06, -5.42842773e+06, 1.49451936e+04, -2.11034321e+02, -1.61886788e+02, 7.48942330e+03])
-
-	t0, tf = 0, 150.00
+	t0, tf = 0, 20000.00
 	final = np.zeros((200, 6))
+	final_2 = np.zeros((200, 6))
+	diffs = []
 
-
-	propagatorObj = propagator()
-	#propagatorObj.restruct_geopotential_file("RWI_TOPO_2012_plusGRS80.gfc")
-	data = propagatorObj.read_geopotential_coeffs("restruct_RWI_TOPO_2012_plusGRS80.gfc", False)
-	propagatorObj.createNumpyArrayForCoeffs(data, 10, 10)
-
-
-	# ydot_geopotential(y, C, S, 10, 10)
-	# ydot(y)
-
-	for i in range(0, 1):
-
-		
-		final[i, :] = propagatorObj.rk4(y, t0, tf, 50, 2, False, 0.5, True, True, 2.1, 1, propagatorObj.C, propagatorObj.S, 720, "2012-11-20", "17:40:00", datetime.datetime.now())
+	# propagatorObj = propagator()
+	# # propagatorObj.restruct_geopotential_file("RWI_TOPO_2012_plusGRS80.gfc")
+	# data = propagatorObj.read_geopotential_coeffs("restruct_EGM2008.gfc", False)
+	# propagatorObj.createNumpyArrayForCoeffs(data, 100, 100)
 	#
-	# 	t0 = tf
-	# 	tf = tf + 100
-	# 	y = final[i, :]
-	# 	# print(i, mp.sqrt(y[0]**2+y[1]**2+y[2]**2) - 6378137)
-	#
-	# propagatorObj.accelerations_graph(False, True, True)
-	# state_vectors = np.asarray(propagatorObj.keepStateVectors)
+	# for i in range(0, 1):
+	# 	final[i, :] = propagatorObj.rk4(y, t0, tf, 100, 2, False, 0.5, False, False, 2.1, 1, propagatorObj.C,
+	# 									propagatorObj.S, 720, "2012-11-20", "17:40:00", datetime.datetime.now())
 
-	# print(propagatorObj.keepWantedAcceleration)
-	# print(propagatorObj.tickLabels)
-	# altitude = []
-	# for i in range(0, len(propagatorObj.keepStateVectors)):
-	# 	altitude.append(np.sqrt(propagatorObj.keepStateVectors[i][0] ** 2 + propagatorObj.keepStateVectors[i][
-	# 														1] ** 2 + propagatorObj.keepStateVectors[i][2] ** 2) - 6371000)
+	for j in range(150, 200, 50):
+		propagatorObj = propagator()
+		data = propagatorObj.read_geopotential_coeffs("restruct_EGM2008.gfc", False)
+		propagatorObj.createNumpyArrayForCoeffs(data, j, j)
 
-	# plt.plot(np.sqrt(state_vectors[:, 0]**2 + state_vectors[:, 1]**2 + state_vectors[:, 2]**2))
-	# plt.show()
+		print(np.size(propagatorObj.C))
+
+		final[0, :] = propagatorObj.rk4(y, t0, tf, 100, 2, False, 0.5, False, False, 2.1, 1, propagatorObj.C, propagatorObj.S, 720, "2012-11-20", "17:40:00", datetime.datetime.now())
+
+		final[:, :] = np.asarray(propagatorObj.keepStateVectors)[:, :]
+
+		propagatorObj = propagator()
+		data = propagatorObj.read_geopotential_coeffs("restruct_EGM2008.gfc", False)
+		propagatorObj.createNumpyArrayForCoeffs(data, j+50, j+50)
+
+		print(np.size(propagatorObj.C))
+
+		final_2[0, :] = propagatorObj.rk4(y, t0, tf, 100, 2, False, 0.5, False, False, 2.1, 1, propagatorObj.C,
+										   propagatorObj.S, 720, "2012-11-20", "17:40:00", datetime.datetime.now())
+
+		final_2[:, :] = np.asarray(propagatorObj.keepStateVectors)[:, :]
+
+		diffs.append(final_2[:, :] - final[:, :])
 
 
+	print(diffs)
