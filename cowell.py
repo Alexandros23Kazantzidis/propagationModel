@@ -14,6 +14,7 @@ from anom_conv import true_to_ecc, ecc_to_mean, mean_to_t
 from teme_to_ecef import conv_to_ecef
 import pandas as pd
 import datetime
+import timeit
 
 
 class propagator():
@@ -230,7 +231,7 @@ class propagator():
 			az = (mu / R_ref ** 2) * az
 			return np.array([ax, ay, az])
 
-	def ydot(self, y, C, S, n, m, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime):
+	def ydot(self, y, C, S, n, m, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime, currdatetime):
 		"""Returns the time derivative of a given state.
 			Args:
 				y(1x6 numpy array): the state vector [rx,ry,rz,vx,vy,vz]
@@ -255,7 +256,12 @@ class propagator():
 		self.accelerations[0, :] = a
 
 		bspFileName = 'de430.bsp'
-		positionSun, positionMoon = position_sun_moon(bspFileName)
+		try:
+			currdatetime = currdatetime + datetime.timedelta(seconds=self.epochs[-1])
+		except:
+			pass
+
+		positionSun, positionMoon = position_sun_moon(bspFileName, currdatetime)
 
 		if sunAndMoon is True:
 			accelerationSun, accelerationMoon = find_sun_moon_acc(y, positionSun, positionMoon)
@@ -279,7 +285,7 @@ class propagator():
 
 		return np.array([*y[3:6], *a])
 
-	def rk4(self, y, t0, tf, h, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, C, S, satMass, goceDate, goceTime):
+	def rk4(self, y, t0, tf, h, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, C, S, satMass, goceDate, goceTime, currdatetime):
 		"""Runge-Kutta 4th Order Numerical Integrator
 			Args:
 				y(1x6 numpy array): the state vector [rx,ry,rz,vx,vy,vz]
@@ -312,20 +318,21 @@ class propagator():
 			keepGoceTime = goceTime
 			goceTime = goceTime[:-1] + "0.000"
 
-			k1 = h * self.ydot(y, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime)
+			k1 = h * self.ydot(y, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime, currdatetime)
 
 
 			self.keepAccelerations.append(np.copy(self.accelerations))
 
-			k2 = h * self.ydot(y + k1 / 2, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime)
-			k3 = h * self.ydot(y + k2 / 2, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime)
-			k4 = h * self.ydot(y + k3, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime)
+			k2 = h * self.ydot(y + k1 / 2, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime, currdatetime)
+			k3 = h * self.ydot(y + k2 / 2, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime, currdatetime)
+			k4 = h * self.ydot(y + k3, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime, currdatetime)
 
 			self.keepStateVectors.append(y)
 
 			y = y+(k1+2*k2+2*k3+k4)/6
 
 			self.epochs.append(t)
+			#print(t)
 
 			t = t+h
 
@@ -567,32 +574,34 @@ class propagator():
 if __name__ == "__main__":
 	y = np.array([4.57158479e+06, -5.42842773e+06, 1.49451936e+04, -2.11034321e+02, -1.61886788e+02, 7.48942330e+03])
 
-	t0, tf = 0, 500.00
+	t0, tf = 0, 150.00
 	final = np.zeros((200, 6))
 
+
 	propagatorObj = propagator()
-	# propagatorObj.restruct_geopotential_file("RWI_TOPO_2012_plusGRS80.gfc")
+	#propagatorObj.restruct_geopotential_file("RWI_TOPO_2012_plusGRS80.gfc")
 	data = propagatorObj.read_geopotential_coeffs("restruct_RWI_TOPO_2012_plusGRS80.gfc", False)
-	#
 	propagatorObj.createNumpyArrayForCoeffs(data, 10, 10)
-	#
+
+
 	# ydot_geopotential(y, C, S, 10, 10)
 	# ydot(y)
 
 	for i in range(0, 1):
 
-		final[i, :] = propagatorObj.rk4(y, t0, tf, 50, 2, False, 0.5, True, True, 2.1, 1, propagatorObj.C, propagatorObj.S, 720, "2012-11-20", "17:40:00")
-
-		t0 = tf
-		tf = tf + 100
-		y = final[i, :]
-		# print(i, mp.sqrt(y[0]**2+y[1]**2+y[2]**2) - 6378137)
-
-	propagatorObj.accelerations_graph(False, True, True)
+		
+		final[i, :] = propagatorObj.rk4(y, t0, tf, 50, 2, False, 0.5, True, True, 2.1, 1, propagatorObj.C, propagatorObj.S, 720, "2012-11-20", "17:40:00", datetime.datetime.now())
+	#
+	# 	t0 = tf
+	# 	tf = tf + 100
+	# 	y = final[i, :]
+	# 	# print(i, mp.sqrt(y[0]**2+y[1]**2+y[2]**2) - 6378137)
+	#
+	# propagatorObj.accelerations_graph(False, True, True)
 	# state_vectors = np.asarray(propagatorObj.keepStateVectors)
 
-	print(propagatorObj.keepWantedAcceleration)
-	print(propagatorObj.tickLabels)
+	# print(propagatorObj.keepWantedAcceleration)
+	# print(propagatorObj.tickLabels)
 	# altitude = []
 	# for i in range(0, len(propagatorObj.keepStateVectors)):
 	# 	altitude.append(np.sqrt(propagatorObj.keepStateVectors[i][0] ** 2 + propagatorObj.keepStateVectors[i][

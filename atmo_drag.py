@@ -65,13 +65,13 @@ def find_drag_petrubation(Cd, mSat, dimensions, y):
 		if rForDrag < 300:
 			p = 35.26
 		else:
-			p = 0.018
+			p = 0.0000018
 
 	vrel = vrel / 1000
 	A = A / 1000
 	p = p / 1000
 	accelerationDrag = -1/2 * Cd * (A / mSat) * p * vrel ** 2 * (vrel / np.linalg.norm(vrel))
-	print((vrel / np.linalg.norm(vrel)))
+	#print((vrel / np.linalg.norm(vrel)))
 	accelerationDrag = accelerationDrag * 1000
 
 	return accelerationDrag

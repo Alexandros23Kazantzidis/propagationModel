@@ -26,8 +26,11 @@ window.onload = function () {
     $('span#react-select-4--value-item').on('DOMSubtreeModified',function(){
         if (($('span[role="option"]')[2].textContent === "Harris-Priester")) {
             $("#goce").css("display", "none");
+            $(".date-time").css("display", "block");
         } else if (($('span[role="option"]')[2].textContent === "Doorbnos Thermospheric Density Model (Only for GOCE)")) {
             $("#goce").css("display", "block");
+            $(".date-time").css("display", "none");
+
         }
     });
 

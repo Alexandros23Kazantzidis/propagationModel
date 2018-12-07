@@ -12,6 +12,7 @@ import pandas as pd
 import plotly.plotly as py
 import plotly.graph_objs as go
 from plotly import tools
+import datetime
 
 pd.set_option("display.precision", 10)
 
@@ -32,20 +33,26 @@ app.layout = html.Div([
         html.Div(children=[
             html.H3('Initial Parameters'),
             html.Label('State Vector (m - m/s)', className="main"),
-            # dcc.Textarea(value='+6465819, -1429000, +14827, -206.5, -865.7, +7707.7', id='state-vector', style={"margin-bottom": "5px", "min-height": "150px"}),
-            dcc.Textarea(value='4.57158479e+06, -5.42842773e+06, 1.49451936e+04, -2.11034321e+02, -1.61886788e+02, 7.48942330e+03', id='state-vector', style={"margin-bottom": "5px", "min-height": "150px"}),
+            dcc.Textarea(value='+6465819, -1429000, +14827, -206.5, -865.7, +7707.7', id='state-vector', style={"margin-bottom": "5px", "min-height": "150px"}),
+            #  dcc.Textarea(value='4.57158479e+06, -5.42842773e+06, 1.49451936e+04, -2.11034321e+02, -1.61886788e+02, 7.48942330e+03', id='state-vector', style={"margin-bottom": "5px", "min-height": "150px"}),
+            # dcc.Textarea(value='-8.39487077e+06,1.78485549e+07,1.72470011e+07,-2.02935356e+03,-2.79438155e+03,1.86857675e+03', id='state-vector', style={"margin-bottom": "5px", "min-height": "150px"}),
 
             html.Label('Initial Time (sec)', className="main"),
             dcc.Input(value='0', type='text', id='init-time', style={"margin-bottom": "5px"}),
 
             html.Label('Final Time (sec)', className="main"),
-            dcc.Input(value='26400', type='text', id='final-time', style={"margin-bottom": "5px"}),
+            dcc.Input(value='10000', type='text', id='final-time', style={"margin-bottom": "5px"}),
 
             html.Label('Step Size (sec)', className="main"),
             dcc.Input(value='100', type='text', id='step-size', style={"margin-bottom": "5px"}),
 
             html.Label('Satellite Mass (kg)', className="main"),
             dcc.Input(value='720', type='text', id='sat-mass', style={"margin-bottom": "5px"}),
+
+            html.Div(children=[html.Label('Date and Time (yyyy-mm-dd hh:mm:ssssss)', className="main"),
+            dcc.Input(value="2018-08-25 00:00:00.0000", type='text', id='date-time', style={"margin-bottom": "5px"})],
+                     className='date-time')
+
         ], style={'margin': '20px', }),
 
         html.Div(children=[
@@ -74,9 +81,9 @@ app.layout = html.Div([
                 ),
 
                 html.Label('Order (n)', className="second"),
-                dcc.Input(value='20', type='text', id='order-geo', style={"margin-bottom": "5px"}),
+                dcc.Input(value='100', type='text', id='order-geo', style={"margin-bottom": "5px"}),
                 html.Label('Degree (m)', className="second"),
-                dcc.Input(value='20', type='text', id='degree-geo', style={"margin-bottom": "5px"}),
+                dcc.Input(value='100', type='text', id='degree-geo', style={"margin-bottom": "5px"}),
 
                 html.Br(),
 
@@ -152,12 +159,14 @@ app.layout = html.Div([
                 State('goce-date', 'value'),
                 State('goce-time', 'value'),
                 State('drag-model-choose', 'value'),
+		State('date-time', 'value'),
                 ])
-def update_output(n_clicks, input1, input2, input3, input4, input5, input6, input7, input8, input9, input10, input11, input12):
+def update_output(n_clicks, input1, input2, input3, input4, input5, input6, input7, input8, input9, input10, input11, input12, input13):
 
     if n_clicks == 0:
         pass
     else:
+        input13 = datetime.datetime.strptime(input13, '%Y-%m-%d %H:%M:%S.%f')
         y = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         index = 0
         parseInput1 = input1.split(",")
@@ -191,7 +200,7 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
             loopTf = step
             loopIndex = int((tf - t0) / step)
 
-            y = propagatorObj.rk4(y, t0, tf, step, kepOrGeo, solar, float(input7), sunAndMoon, drag, float(input8), input12, propagatorObj.C, propagatorObj.S, float(input9), input10, input11)
+            y = propagatorObj.rk4(y, t0, tf, step, kepOrGeo, solar, float(input7), sunAndMoon, drag, float(input8), input12, propagatorObj.C, propagatorObj.S, float(input9), input10, input11, input13)
 
             altitude = np.sqrt(np.asarray(propagatorObj.keepStateVectors)[:, 0]**2 + np.asarray(propagatorObj.keepStateVectors)[:, 1]**2 + np.asarray(propagatorObj.keepStateVectors)[:, 2]**2)
             beforeDataFrame = np.zeros((loopIndex, 7))
@@ -213,7 +222,7 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
             returnAcceTable = pd.DataFrame(
                 data=beforeAccelTable,
                 index=propagatorObj.tickLabels,
-                columns=["Max(m^2/s)", "Min(m^2/s)", "Average(m^2/s)", "STD(m^2/s)"]
+                columns=["Max(m/s^2)", "Min(m/s^2)", "Average(m/s^2)", "STD(m/s^2)"]
             )
 
             returnAcceTable.insert(0, "Source", returnAcceTable.index)
