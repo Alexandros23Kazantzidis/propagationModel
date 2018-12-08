@@ -169,6 +169,10 @@ class propagator():
 		return np.array([ax, ay, az])
 
 	def geodynamic_model(self, y, C, S, n, m):
+		"""
+		Compute the acceleration coming from Earth and a Geodynamic Model
+		with C,S and order n and class m
+		"""
 
 		mu = 398600.4405e+09
 		R_ref = 6378137
@@ -339,6 +343,11 @@ class propagator():
 		return y
 
 	def accelerations_graph(self, solar, sunAndMoon, drag):
+		"""
+		Create numpy arrays for keeping all the accelerations to be used
+		for graphs in the main web_app.py. Also compute the number that
+		represents the order of magnitude of every acceleration
+		"""
 
 		self.keepAbsoluteAccelerations = []
 		self.keepWantedAcceleration = []
@@ -365,6 +374,7 @@ class propagator():
 			checkWith = np.mean(wantedAcceleration)
 			self.keepAbsoluteAccelerations.append([np.max(wantedAcceleration), np.min(wantedAcceleration), checkWith, np.std(wantedAcceleration)])
 
+			# Order of magnitude
 			if checkWith > 1:
 				if checkWith / 10 > 1:
 					if checkWith / 100 > 1:
@@ -476,6 +486,10 @@ class propagator():
 		return coords_ecef, times
 
 	def keplerian_elements_graph(self):
+		"""
+		Create a statistics table/dataframe for keplerian elements
+		to be used by web_app.py
+		"""
 
 		self.keepKepElements = np.array([])
 		usableStateVector = np.asarray(self.keepStateVectors)
@@ -502,6 +516,9 @@ class propagator():
 		return returnStatisticKepTable, keepKepElements
 
 	def download_state_vectors(self):
+		"""
+		Method to download state vectors csv
+		"""
 
 		datestr = str(datetime.datetime.time(datetime.datetime.now())).replace(":", "")
 		datestr = datestr.replace(".", "")
@@ -522,6 +539,9 @@ class propagator():
 		returnStateTable.to_csv(filename, sep=",")
 
 	def download_kep_vectors(self):
+		"""
+		Method to download keplerian elements csv
+		"""
 
 		datestr = str(datetime.datetime.time(datetime.datetime.now())).replace(":", "")
 		datestr = datestr.replace(".", "")
@@ -542,6 +562,9 @@ class propagator():
 		returnKepTable.to_csv(filename, sep=",")
 
 	def download_accel_vectors(self):
+		"""
+		Method to download accelerations vectors csv
+		"""
 
 		datestr = str(datetime.datetime.time(datetime.datetime.now())).replace(":", "")
 		datestr = datestr.replace(".", "")

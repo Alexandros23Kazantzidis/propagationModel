@@ -33,8 +33,8 @@ app.layout = html.Div([
         html.Div(children=[
             html.H3('Initial Parameters'),
             html.Label('State Vector (m - m/s)', className="main"),
-            # dcc.Textarea(value='+6465819, -1429000, +14827, -206.5, -865.7, +7707.7', id='state-vector', style={"margin-bottom": "5px", "min-height": "150px"}),
-            dcc.Textarea(value='-4944559.17407762,5091026.32253509,14967.5683986330,568.983806254046,535.694647212606,7489.45082782167', id='state-vector', style={"margin-bottom": "5px", "min-height": "150px"}),
+            dcc.Textarea(value='+6465819, -1429000, +14827, -206.5, -865.7, +7707.7', id='state-vector', style={"margin-bottom": "5px", "min-height": "150px"}),
+            # dcc.Textarea(value='-4944559.17407762,5091026.32253509,14967.5683986330,568.983806254046,535.694647212606,7489.45082782167', id='state-vector', style={"margin-bottom": "5px", "min-height": "150px"}),
             #  dcc.Textarea(value='4.57158479e+06, -5.42842773e+06, 1.49451936e+04, -2.11034321e+02, -1.61886788e+02, 7.48942330e+03', id='state-vector', style={"margin-bottom": "5px", "min-height": "150px"}),
             # dcc.Textarea(value='-8.39487077e+06,1.78485549e+07,1.72470011e+07,-2.02935356e+03,-2.79438155e+03,1.86857675e+03', id='state-vector', style={"margin-bottom": "5px", "min-height": "150px"}),
             # dcc.Textarea(value='9637467.29653857,-17209655.4442556,17246761.9513018,575.201863523118,2230.36513274403,1868.64989675138', id='state-vector', style={"margin-bottom": "5px", "min-height": "150px"}),
@@ -168,6 +168,7 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
     if n_clicks == 0:
         pass
     else:
+        # Gather and compute input values
         input13 = datetime.datetime.strptime(input13, '%Y-%m-%d %H:%M:%S.%f')
         y = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         index = 0
@@ -202,8 +203,10 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
             loopTf = step
             loopIndex = int((tf - t0) / step)
 
+            # Run main computation method
             y = propagatorObj.rk4(y, t0, tf, step, kepOrGeo, solar, float(input7), sunAndMoon, drag, float(input8), input12, propagatorObj.C, propagatorObj.S, float(input9), input10, input11, input13)
 
+            # Create dataframe for state vectors table
             altitude = np.sqrt(np.asarray(propagatorObj.keepStateVectors)[:, 0]**2 + np.asarray(propagatorObj.keepStateVectors)[:, 1]**2 + np.asarray(propagatorObj.keepStateVectors)[:, 2]**2)
             beforeDataFrame = np.zeros((loopIndex, 7))
             beforeDataFrame[:, 1:7] = propagatorObj.keepStateVectors[:]
@@ -213,6 +216,7 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
                                        index=range(0, loopIndex),
                                        columns=["Time(sec)", "rx(m)", "ry(m)", "rz(m)", "vx(m/s)", "vy(m/s)", "vz(m/s)"])
 
+            # Create dataframe for accelerations table
             propagatorObj.accelerations_graph(solar, sunAndMoon, drag)
             beforeAccelTable = np.zeros((len(propagatorObj.tickLabels), 4))
             for i in range(0, len(propagatorObj.tickLabels)):
@@ -283,7 +287,7 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
 
             fig['layout'].update(height=1000, title='Keplerian Elements', showlegend=False)
 
-            # Log Accel Graph
+            # Log Acceleration Graph
             allTraceLogs = []
             for i in range(0, len(propagatorObj.keepWantedAcceleration)):
                 tracelog = go.Scatter(
@@ -304,6 +308,7 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
             figlog['layout'].update(title='Logarithmic Accelerations Graph (m^2/sec)')
             figlog.add_traces(allTraceLogs)
 
+            # Return all the tables and graphs
             return html.Div(children=
                         [html.Table(
                             # Header
@@ -378,8 +383,6 @@ def update_output(n_clicks, input1, input2, input3, input4, input5, input6, inpu
                        id=depends1,
                        figure=figlog,
                    ),
-
-
 
 
 @app.callback(Output('output-geo-coeff', 'children'),
