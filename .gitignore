@@ -112,3 +112,14 @@ restruct_EGM2008.gfc
 data.p
 de430.bsp
 prop
+goce_denswind_v1_5_2012-11.txt
+GOCO03s.gfc
+data restruct_EGM2008.gfc.p
+data restruct_GOCO03s.gfc.p
+data restruct_RWI_TOPO_2012_plusGRS80.gfc.p
+kep_222822935334.csv
+restruct_GOCO03s.gfc
+restruct_RWI_TOPO_2012_plusGRS80.gfc
+RWI_TOPO_2012_plusGRS80.gfc
+state_222757856706.csv
+state_225625313551.csv
