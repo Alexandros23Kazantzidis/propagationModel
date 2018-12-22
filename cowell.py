@@ -110,6 +110,8 @@ class propagator():
 		C[0, 0] = 1
 		self.C = np.copy(C)
 		self.S = np.copy(S)
+		self.n = n
+		self.m = m
 
 	def ydot_geopotential(self, y, C, S, n, m):
 		"""Returns the time derivative of only the geopotential effect for a given state.
@@ -322,14 +324,14 @@ class propagator():
 			keepGoceTime = goceTime
 			goceTime = goceTime[:-1] + "0.000"
 
-			k1 = h * self.ydot(y, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime, currdatetime)
+			k1 = h * self.ydot(y, C, S, self.n, self.m, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime, currdatetime)
 
 
 			self.keepAccelerations.append(np.copy(self.accelerations))
 
-			k2 = h * self.ydot(y + k1 / 2, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime, currdatetime)
-			k3 = h * self.ydot(y + k2 / 2, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime, currdatetime)
-			k4 = h * self.ydot(y + k3, C, S, 10, 10, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime, currdatetime)
+			k2 = h * self.ydot(y + k1 / 2, C, S, self.n, self.m, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime, currdatetime)
+			k3 = h * self.ydot(y + k2 / 2, C, S, self.n, self.m, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime, currdatetime)
+			k4 = h * self.ydot(y + k3, C, S, self.n, self.m, kepOrGeo, solar, solarEpsilon, sunAndMoon, drag, dragCoeff, draModel, satMass, goceDate, goceTime, currdatetime)
 
 			self.keepStateVectors.append(y)
 
@@ -605,13 +607,13 @@ if __name__ == "__main__":
 	# propagatorObj = propagator()
 	# # propagatorObj.restruct_geopotential_file("RWI_TOPO_2012_plusGRS80.gfc")
 	# data = propagatorObj.read_geopotential_coeffs("restruct_EGM2008.gfc", False)
-	# propagatorObj.createNumpyArrayForCoeffs(data, 100, 100)
+	# propagatorObj.createNumpyArrayForCoeffs(data, 3, 2)
 	#
 	# for i in range(0, 1):
 	# 	final[i, :] = propagatorObj.rk4(y, t0, tf, 100, 2, False, 0.5, False, False, 2.1, 1, propagatorObj.C,
 	# 									propagatorObj.S, 720, "2012-11-20", "17:40:00", datetime.datetime.now())
 
-	for j in range(150, 200, 50):
+	for j in range(5, 20):
 		propagatorObj = propagator()
 		data = propagatorObj.read_geopotential_coeffs("restruct_EGM2008.gfc", False)
 		propagatorObj.createNumpyArrayForCoeffs(data, j, j)
@@ -624,7 +626,7 @@ if __name__ == "__main__":
 
 		propagatorObj = propagator()
 		data = propagatorObj.read_geopotential_coeffs("restruct_EGM2008.gfc", False)
-		propagatorObj.createNumpyArrayForCoeffs(data, j+50, j+50)
+		propagatorObj.createNumpyArrayForCoeffs(data, j+1, j+1)
 
 		print(np.size(propagatorObj.C))
 
@@ -635,5 +637,5 @@ if __name__ == "__main__":
 
 		diffs.append(final_2[:, :] - final[:, :])
 
-
-	print(diffs)
+	# print(diffs[0][0,:])
+		print(np.mean(diffs[j-5], axis=0))
