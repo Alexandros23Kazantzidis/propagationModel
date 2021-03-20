@@ -13,7 +13,7 @@ Flask-Compress==1.4.0
 idna==2.7
 ipython-genutils==0.2.0
 itsdangerous==0.24
-Jinja2==2.10
+Jinja2==2.11.3
 jplephem==2.8
 jsonschema==2.6.0
 julian==0.14
